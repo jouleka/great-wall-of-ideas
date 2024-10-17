@@ -2,14 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User } from '@supabase/supabase-js'
+import { User, AuthError, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string) => Promise<void>
+  signUp: (email: string, password: string, name: string) => Promise<{ user: User | null; session: Session | null }>
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
 }
@@ -38,25 +38,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    router.push('/main')
+    if (error) {
+      console.error('Sign in error:', error.message)
+      throw new Error(`Failed to sign in: ${error.message}`)
+    }
+    router.push('/ideas')
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({ 
+    const { data, error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
-        data: { name }
+        data: { name },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`
       }
     })
-    if (error) throw error
-    router.push('/main')
+    if (error) {
+      console.error('Sign up error:', error.message)
+      throw new Error(`Failed to sign up: ${error.message}`)
+    }
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      throw new Error('Email address is already in use')
+    }
+    return data
   }
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    if (error) {
+      console.error('Sign out error:', error.message)
+      throw new Error(`Failed to sign out: ${error.message}`)
+    }
     router.push('/auth')
   }
 
@@ -64,7 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
     })
-    if (error) throw error
+    if (error) {
+      console.error('Google sign in error:', error.message)
+      throw new Error(`Failed to sign in with Google: ${error.message}`)
+    }
   }
 
   const value = {

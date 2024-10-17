@@ -5,8 +5,8 @@ export function getIdeaIcon(idea: Idea, ideas: Idea[]) {
   const topIdea = sortedIdeas[0]
   const bottomIdea = sortedIdeas[sortedIdeas.length - 1]
   const averageVotes = ideas.reduce((sum, i) => sum + i.votes, 0) / ideas.length
-  const isIdeaOfTheWeek = isWithinLastWeek(idea.createdAt) && idea.votes > averageVotes * 1.5
-  const isIdeaOfTheMonth = isWithinLastMonth(idea.createdAt) && idea.votes > averageVotes * 2
+  const isIdeaOfTheWeek = isWithinLastWeek(idea.created_at) && idea.votes > averageVotes * 1.5
+  const isIdeaOfTheMonth = isWithinLastMonth(idea.created_at) && idea.votes > averageVotes * 2
 
   if (isIdeaOfTheMonth) return "Calendar"
   if (isIdeaOfTheWeek) return "Clock"
@@ -22,8 +22,8 @@ export function getIdeaBadge(idea: Idea, ideas: Idea[]) {
   const sortedIdeas = [...ideas].sort((a, b) => b.votes - a.votes)
   const topIdea = sortedIdeas[0]
   const averageVotes = ideas.reduce((sum, i) => sum + i.votes, 0) / ideas.length
-  const isIdeaOfTheWeek = isWithinLastWeek(idea.createdAt) && idea.votes > averageVotes * 1.5
-  const isIdeaOfTheMonth = isWithinLastMonth(idea.createdAt) && idea.votes > averageVotes * 2
+  const isIdeaOfTheWeek = isWithinLastWeek(idea.created_at) && idea.votes > averageVotes * 1.5
+  const isIdeaOfTheMonth = isWithinLastMonth(idea.created_at) && idea.votes > averageVotes * 2
 
   if (isIdeaOfTheMonth) return { text: "Idea of the Month", variant: "purple" }
   if (isIdeaOfTheWeek) return { text: "Idea of the Week", variant: "indigo" }

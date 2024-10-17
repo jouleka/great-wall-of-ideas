@@ -1,23 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/app/auth/components/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from './auth-provider'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Rat } from 'lucide-react'
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const { signIn, signUp, signInWithGoogle } = useAuth()
 
   const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccessMessage(null)
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
@@ -29,10 +31,13 @@ export function AuthForm() {
       if (isLogin) {
         await signIn(email, password)
       } else {
-        await signUp(email, password, name)
+        const { user } = await signUp(email, password, name)
+        if (user) {
+          setSuccessMessage('Registration successful! Please check your email to confirm your account.')
+        }
       }
     } catch (err) {
-      setError(isLogin ? 'Failed to sign in' : 'Failed to sign up')
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -45,7 +50,7 @@ export function AuthForm() {
     try {
       await signInWithGoogle()
     } catch (err) {
-      setError('Failed to sign in with Google')
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Google')
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -110,6 +115,7 @@ export function AuthForm() {
           </TabsContent>
         </Tabs>
         {error && <p className="text-red-500 text-center mt-4">{error}</p>}
+        {successMessage && <p className="text-green-500 text-center mt-4">{successMessage}</p>}
       </CardContent>
       <CardFooter>
         <div className="w-full space-y-4">

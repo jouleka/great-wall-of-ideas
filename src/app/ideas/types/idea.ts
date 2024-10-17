@@ -6,5 +6,6 @@ export interface Idea {
   company: string
   category: string
   trend: "rising" | "falling" | "stable"
-  createdAt: Date
+  created_at: Date
+  user_id: string
 }

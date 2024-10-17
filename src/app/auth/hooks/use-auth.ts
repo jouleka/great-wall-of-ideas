@@ -25,7 +25,7 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         setUser(session?.user ?? null)
-        router.push('/main')
+        router.push('/ideas')
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
         router.push('/auth')
@@ -51,7 +51,7 @@ export function useAuth() {
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    router.push('/main')
+    router.push('/ideas')
   }, [router])
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
@@ -63,7 +63,7 @@ export function useAuth() {
       }
     })
     if (error) throw error
-    router.push('/main')
+    router.push('/ideas')
   }, [router])
 
   const signOut = useCallback(async () => {

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Idea } from "../types/idea"
 import { getIdeaIcon, getIdeaBadge } from "../utils/ideaUtils"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/app/auth/hooks/use-auth"
 
 interface IdeaCardProps {
   idea: Idea
@@ -21,10 +22,19 @@ interface IdeaCardProps {
 export function IdeaCard({ idea, ideas, onVote }: IdeaCardProps) {
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
   const ideaIcon = getIdeaIcon(idea, ideas)
   const ideaBadge = getIdeaBadge(idea, ideas)
 
   const handleVote = (increment: boolean) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to vote.",
+        variant: "destructive"
+      })
+      return
+    }
     onVote(idea.id, increment)
     toast({
       title: increment ? "Idea Supported!" : "Support Withdrawn",
