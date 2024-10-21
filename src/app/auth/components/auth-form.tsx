@@ -24,14 +24,15 @@ export function AuthForm() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const name = formData.get('name') as string
-    const isLogin = !formData.get('name')
+    const username = formData.get('username') as string
+    const isLogin = !formData.get('username')
 
     try {
       if (isLogin) {
         await signIn(email, password)
       } else {
-        const { user } = await signUp(email, password, name)
+        const { user, error } = await signUp(email, password, username)
+        if (error) throw error
         if (user) {
           setSuccessMessage('Registration successful! Please check your email to confirm your account.')
         }
@@ -93,8 +94,8 @@ export function AuthForm() {
           <TabsContent value="register">
             <form onSubmit={handleEmailAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" type="text" placeholder="Enter your name" required className="bg-white/50" />
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" name="username" type="text" placeholder="Choose a username" required className="bg-white/50" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

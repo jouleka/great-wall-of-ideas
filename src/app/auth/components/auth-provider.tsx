@@ -1,15 +1,13 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { User, AuthError, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
+import { createClientComponentClient, User } from '@supabase/auth-helpers-nextjs'
 
 interface AuthContextType {
   user: User | null
-  isLoading: boolean
+  loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string) => Promise<{ user: User | null; session: Session | null }>
+  signUp: (email: string, password: string, username: string) => Promise<{ user: User | null; error: Error | null }>
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
 }
@@ -18,78 +16,85 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user)
-      } else {
-        setUser(null)
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
+      } catch (error) {
+        console.error('Error checking user:', error)
+      } finally {
+        setLoading(false)
       }
-      setIsLoading(false)
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
     })
+
+    checkUser()
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      console.error('Sign in error:', error.message)
-      throw new Error(`Failed to sign in: ${error.message}`)
-    }
-    router.push('/ideas')
-  }
+    if (error) throw error
+  }, [supabase])
 
-  const signUp = async (email: string, password: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-        data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`
-      }
-    })
-    if (error) {
-      console.error('Sign up error:', error.message)
-      throw new Error(`Failed to sign up: ${error.message}`)
-    }
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      throw new Error('Email address is already in use')
-    }
-    return data
-  }
+  const signUp = useCallback(async (email: string, password: string, username: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: username,
+          },
+        },
+      })
 
-  const signOut = async () => {
+      if (error) throw error
+
+      return { user: data.user, error: null }
+    } catch (error) {
+      console.error('Error in signUp:', error)
+      return { user: null, error: error instanceof Error ? error : new Error('An unknown error occurred') }
+    }
+  }, [supabase])
+
+  const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Sign out error:', error.message)
-      throw new Error(`Failed to sign out: ${error.message}`)
-    }
-    router.push('/auth')
-  }
+    if (error) throw error
+  }, [supabase])
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
-    if (error) {
-      console.error('Google sign in error:', error.message)
-      throw new Error(`Failed to sign in with Google: ${error.message}`)
-    }
-  }
+    if (error) throw error
+  }, [supabase])
 
-  const value = {
+  const value = useMemo(() => ({
     user,
-    isLoading,
+    loading,
     signIn,
     signUp,
     signOut,
     signInWithGoogle,
+  }), [user, loading, signIn, signUp, signOut, signInWithGoogle])
+
+  if (loading) {
+    return <div>Loading...</div> // Or a more sophisticated loading component
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
