@@ -12,11 +12,10 @@ import { useIdeas } from "./hooks/use-ideas"
 import { useAuth } from "@/app/auth/hooks/use-auth"
 import { Idea } from "./types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
-import { ErrorBoundary } from "@/components/error-boundary"
+import { UserProfile } from "@/components/user-profile"
 
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { ssr: false })
 const CreateIdeaDialog = dynamic(() => import("./components/create-idea-dialog").then(mod => mod.CreateIdeaDialog), { ssr: false })
-const UserProfile = dynamic(() => import("@/components/user-profile").then(mod => mod.UserProfile), { ssr: false })
 
 export default function GreatWallOfIdeas() {
   const { isLoading } = useAuth()
@@ -49,7 +48,6 @@ export default function GreatWallOfIdeas() {
   }
 
   return (
-    <ErrorBoundary>
       <motion.div 
         className="min-h-screen overflow-hidden font-sans transition-colors duration-300"
         style={{ 
@@ -124,6 +122,5 @@ export default function GreatWallOfIdeas() {
           </ScrollArea>
         </div>
       </motion.div>
-    </ErrorBoundary>
   )
 }
