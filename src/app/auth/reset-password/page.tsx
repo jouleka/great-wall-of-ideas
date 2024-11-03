@@ -2,63 +2,33 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { authService } from "@/lib/services/auth-service"
 
 export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isResetting, setIsResetting] = useState(false)
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault()
-
-    // Validate passwords match
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords don't match", {
-        description: "Please ensure both passwords are identical."
-      })
-      return
-    }
-
-    // Validate password strength
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/
-    if (!passwordRegex.test(newPassword)) {
-      toast.error("Invalid password format", {
-        description: "Password must be at least 8 characters long, contain 1 number and 1 uppercase letter"
-      })
-      return
-    }
-
     setIsResetting(true)
 
-    try {
-      // Update the password using the recovery token
-      const { error } = await supabase.auth.updateUser({ 
-        password: newPassword,
-      })
+    const { success } = await authService.updatePassword({
+      newPassword,
+      confirmPassword
+    })
 
-      if (error) throw error
-
-      toast.success("Password updated successfully!", {
-        description: "Please log in with your new password."
-      })
+    if (success) {
       router.push('/auth')
-    } catch (error) {
-      console.error('Error resetting password:', error)
-      toast.error("Failed to reset password", {
-        description: "Please try again or request a new reset link."
-      })
-    } finally {
-      setIsResetting(false)
     }
+    
+    setIsResetting(false)
   }
 
   return (

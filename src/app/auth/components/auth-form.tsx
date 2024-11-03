@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Rat } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
+import { authService } from '@/lib/services/auth-service'
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -19,7 +19,6 @@ export function AuthForm() {
   const [resetEmail, setResetEmail] = useState("")
   const [showResetForm, setShowResetForm] = useState(false)
   const { signIn, signUp, signInWithGoogle } = useAuth()
-  const supabase = createClientComponentClient()
 
   const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -60,24 +59,14 @@ export function AuthForm() {
 
     setIsResettingPassword(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+      const { success } = await authService.sendPasswordResetEmail({ 
+        email: resetEmail 
       })
-
-      if (error) throw error
-
-      toast.success(
-        "Password reset link sent!", 
-        { description: "Check your email for the reset link." }
-      )
-      setShowResetForm(false)
-      setResetEmail("")
-    } catch (err) {
-      console.error('Error sending reset email:', err)
-      toast.error(
-        "Failed to send reset email", 
-        { description: "Please try again later." }
-      )
+      
+      if (success) {
+        setShowResetForm(false)
+        setResetEmail("")
+      }
     } finally {
       setIsResettingPassword(false)
     }

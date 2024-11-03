@@ -15,6 +15,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { authService } from "@/lib/services/auth-service"
 
 interface ProfileFormData {
   full_name: string
@@ -207,26 +208,12 @@ export function ProfileContent() {
     
     setIsResettingPassword(true)
     setIsUpdatingPassword(false)
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
-
-      if (error) throw error
-      
-      toast.success(
-        "Password reset link sent!", 
-        { description: "Check your email for the reset link." }
-      )
-    } catch (err) {
-      console.error('Error sending reset email:', err)
-      toast.error(
-        "Failed to send reset email", 
-        { description: "Please try again later." }
-      )
-    } finally {
-      setIsResettingPassword(false)
-    }
+    
+    await authService.sendPasswordResetEmail({ 
+      email: user.email 
+    })
+    
+    setIsResettingPassword(false)
   }
 
   async function handleDirectPasswordChange() {
@@ -236,59 +223,24 @@ export function ProfileContent() {
     setIsResettingPassword(false)
     setPasswordError(null)
 
-    try {
-      // Validate passwords match
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        throw new Error("New passwords don't match")
-      }
+    const { success, error } = await authService.updatePassword({
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmPassword: passwordData.confirmPassword
+    })
 
-      // Validate password strength
-      const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/
-      if (!passwordRegex.test(passwordData.newPassword)) {
-        throw new Error("Password must be at least 8 characters long, contain 1 number and 1 uppercase letter")
-      }
-
-      // First verify the current password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: passwordData.currentPassword,
-      })
-
-      if (signInError) {
-        throw new Error("Current password is incorrect")
-      }
-
-      // If current password is correct, update to new password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      })
-
-      if (updateError) throw updateError
-
-      // Clear form and close dialog
+    if (success) {
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       })
-      
-      toast.success(
-        "Password updated successfully!", 
-        { description: "You can now use your new password to log in." }
-      )
-      
-      // Close the dialog
       setIsPasswordDialogOpen(false)
-    } catch (err) {
-      console.error('Error updating password:', err)
-      setPasswordError(err instanceof Error ? err.message : "Failed to update password")
-      toast.error(
-        "Failed to update password",
-        { description: err instanceof Error ? err.message : "Please try again later." }
-      )
-    } finally {
-      setIsUpdatingPassword(false)
+    } else if (error) {
+      setPasswordError(error instanceof Error ? error.message : "Failed to update password")
     }
+    
+    setIsUpdatingPassword(false)
   }
 
   if (isLoading) {
