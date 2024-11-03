@@ -17,29 +17,13 @@ import { useAuth } from "@/app/auth/hooks/use-auth"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { getInitials } from "@/lib/utils/string-utils"
 
 const MAX_DISPLAY_NAME_LENGTH = 20
 const MAX_USERNAME_LENGTH = 25
 
 function truncateText(text: string, maxLength: number) {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
-}
-
-function getInitials(name: string) {
-  // Handle empty strings, numbers, or special characters
-  if (!name || typeof name !== 'string') return '?'
-  
-  // Get first character of each word, max 2 characters
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .map(word => word.charAt(0))
-    .filter(char => char.match(/[A-Za-z]/)) // Only use letters
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-
-  return initials || '?'
 }
 
 export function UserProfile() {
@@ -135,10 +119,12 @@ export function UserProfile() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="p-3 cursor-pointer">
-            <User className="mr-3 h-5 w-5 shrink-0" />
-            <span className="font-medium">Profile</span>
-          </DropdownMenuItem>
+          <Link href="/profile">
+            <DropdownMenuItem className="p-3 cursor-pointer">
+              <User className="mr-3 h-5 w-5 shrink-0" />
+              <span className="font-medium">Profile</span>
+            </DropdownMenuItem>
+          </Link>
           <DropdownMenuItem className="p-3 cursor-pointer">
             <Settings className="mr-3 h-5 w-5 shrink-0" />
             <span className="font-medium">Settings</span>

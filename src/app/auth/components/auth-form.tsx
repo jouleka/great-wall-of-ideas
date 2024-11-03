@@ -8,12 +8,18 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, Rat } from 'lucide-react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { toast } from 'sonner'
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isResettingPassword, setIsResettingPassword] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [showResetForm, setShowResetForm] = useState(false)
   const { signIn, signUp, signInWithGoogle } = useAuth()
+  const supabase = createClientComponentClient()
 
   const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -45,6 +51,38 @@ export function AuthForm() {
     }
   }
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetEmail) {
+      toast.error("Please enter your email address")
+      return
+    }
+
+    setIsResettingPassword(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+
+      if (error) throw error
+
+      toast.success(
+        "Password reset link sent!", 
+        { description: "Check your email for the reset link." }
+      )
+      setShowResetForm(false)
+      setResetEmail("")
+    } catch (err) {
+      console.error('Error sending reset email:', err)
+      toast.error(
+        "Failed to send reset email", 
+        { description: "Please try again later." }
+      )
+    } finally {
+      setIsResettingPassword(false)
+    }
+  }
+
   const handleGoogleAuth = async () => {
     setIsLoading(true)
     setError(null)
@@ -56,6 +94,60 @@ export function AuthForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (showResetForm) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Reset Password</CardTitle>
+          <CardDescription>
+            Enter your email address and we&apos;ll send you a password reset link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+                className="bg-white/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isResettingPassword}
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setShowResetForm(false)}
+                disabled={isResettingPassword}
+              >
+                Back to Login
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -88,6 +180,14 @@ export function AuthForm() {
                 ) : (
                   "Login"
                 )}
+              </Button>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm text-muted-foreground"
+                onClick={() => setShowResetForm(true)}
+              >
+                Forgot your password?
               </Button>
             </form>
           </TabsContent>

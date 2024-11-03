@@ -83,7 +83,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">Someone will build it</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-center">Someone might build it</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
           <div>
