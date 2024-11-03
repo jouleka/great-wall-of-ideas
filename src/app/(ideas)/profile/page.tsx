@@ -1,6 +1,4 @@
-import { Suspense } from "react"
 import { ProfileContent } from "./components/profile-content"
-import { ProfileSkeleton } from "./components/profile-skeleton"
 import { ProfileHeader } from "./components/profile-header"
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
@@ -24,10 +22,8 @@ export default async function ProfilePage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4 space-y-8">
-      <Suspense fallback={<ProfileSkeleton />}>
-        <ProfileHeader />
-        <ProfileContent />
-      </Suspense>
+      <ProfileHeader />
+      <ProfileContent />
     </div>
   )
 }

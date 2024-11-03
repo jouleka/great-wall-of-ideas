@@ -2,9 +2,9 @@
 
 import { motion } from "framer-motion"
 import { useMemo } from "react"
-import { cn } from "@/lib/utils"
-import { useAuth } from "@/app/auth/hooks/use-auth"
-import { useActivityData } from "../hooks/use-activity-data"
+import { cn } from "@/lib/utils/utils"
+import { useAuth } from "@/hooks/use-auth"
+import { useActivityData } from "@/hooks/use-activity-data"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export function ActivityGraph() {

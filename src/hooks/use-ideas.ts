@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Idea } from "../types/idea"
+import { Idea } from "@/lib/types/idea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useToast } from "@/hooks/use-toast"
 
@@ -42,7 +42,7 @@ export function useIdeas() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, loading, ideas.length])
 
   useEffect(() => {
     fetchIdeas()

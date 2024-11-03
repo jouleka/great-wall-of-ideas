@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { AuthProvider } from "@/app/auth/components/auth-provider";
+import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
 import { Toaster } from "sonner";
 
 const geistSans = localFont({

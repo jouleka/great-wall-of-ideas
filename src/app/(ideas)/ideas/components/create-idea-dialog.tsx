@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import dynamic from 'next/dynamic'
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/app/auth/hooks/use-auth"
-import { Idea } from "../types/idea"
+import { useAuth } from "@/hooks/use-auth"
+import { Idea } from "@/lib/types/idea"
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))

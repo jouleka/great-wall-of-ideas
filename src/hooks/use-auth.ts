@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { ExtendedUser } from '@/types/auth'
+import { ExtendedUser } from '@/lib/types/auth'
 import useSWR from 'swr'
 
 // Move fetcher logic outside the hook for reusability

@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
-import { Idea } from "../types/idea"
-import { useIdeaIcon, useIdeaBadge } from "../utils/ideaUtils"
+import { Idea } from "@/lib/types/idea"
+import { useIdeaIcon, useIdeaBadge } from "@/lib/utils/idea-utils"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/app/auth/hooks/use-auth"
+import { useAuth } from "@/hooks/use-auth"
 
 interface IdeaCardProps {
   idea: Idea

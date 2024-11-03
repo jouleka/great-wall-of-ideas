@@ -3,12 +3,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Camera } from "lucide-react"
-import { useAuth } from "@/app/auth/hooks/use-auth"
+import { useAuth } from "@/hooks/use-auth"
 import { getInitials } from "@/lib/utils/string-utils"
 import { motion } from "framer-motion"
-import { ActivityGraph } from "./activity-graph"
+import { ActivityGraph } from "@/components/layout/activity-graph"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useActivityData } from "../hooks/use-activity-data"
+import { useActivityData } from "@/hooks/use-activity-data"
 
 export function ProfileHeader() {
   const { user } = useAuth()

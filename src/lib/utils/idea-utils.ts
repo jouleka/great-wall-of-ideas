@@ -1,4 +1,4 @@
-import { Idea } from "../types/idea"
+import { Idea } from "@/lib/types/idea"
 import { LucideIcon, Lightbulb, Flame, Star, TrendingUp } from "lucide-react"
 import { useMemo } from 'react'
 

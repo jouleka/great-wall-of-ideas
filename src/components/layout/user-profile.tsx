@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { User, LogOut, Settings, LogIn, Bell } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/app/auth/hooks/use-auth"
+import { useAuth } from "@/hooks/use-auth"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 import { getInitials } from "@/lib/utils/string-utils"
 
 const MAX_DISPLAY_NAME_LENGTH = 20

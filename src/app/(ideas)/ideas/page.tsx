@@ -8,11 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import dynamic from 'next/dynamic'
-import { useIdeas } from "./hooks/use-ideas"
-import { useAuth } from "@/app/auth/hooks/use-auth"
-import { Idea } from "./types/idea"
+import { useIdeas } from "@/hooks/use-ideas"
+import { useAuth } from "@/hooks/use-auth"
+import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
-import { UserProfile } from "@/components/user-profile"
+import { UserProfile } from "@/components/layout/user-profile"
 
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { ssr: false })
 const CreateIdeaDialog = dynamic(() => import("./components/create-idea-dialog").then(mod => mod.CreateIdeaDialog), { ssr: false })
