@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, memo } from "react"
+import React, { useCallback, memo, useState, useEffect } from "react"
 import { ChevronUp, ChevronDown, Award, Flame, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,10 +11,12 @@ import { Idea } from "@/lib/types/idea"
 import { useIdeaIcon, useIdeaBadge } from "@/lib/utils/idea-utils"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
+import { cn } from "@/lib/utils/utils"
+import { voteService } from "@/lib/services/vote-service"
 
 interface IdeaCardProps {
   idea: Idea
-  onVote: (id: string, voteType: "upvote" | "downvote") => Promise<void>
+  onVote: (ideaId: string, voteType: "upvote" | "downvote") => Promise<void>
 }
 
 const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
@@ -22,6 +24,18 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
   const { user } = useAuth()
   const IconComponent = useIdeaIcon(idea)
   const ideaBadge = useIdeaBadge(idea)
+  const [voteCount, setVoteCount] = useState(idea.upvotes - idea.downvotes)
+  const [currentVote, setCurrentVote] = useState<'upvote' | 'downvote' | null>(null)
+
+  // Load current user's vote when component mounts
+  useEffect(() => {
+    async function loadCurrentVote() {
+      if (!user) return
+      const vote = await voteService.getCurrentVote(idea.id, user.id)
+      setCurrentVote(vote)
+    }
+    loadCurrentVote()
+  }, [idea.id, user])
 
   const handleVote = useCallback(async (voteType: "upvote" | "downvote") => {
     if (!user) {
@@ -32,12 +46,30 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
       })
       return
     }
-    await onVote(idea.id, voteType)
-    toast({
-      title: voteType === "upvote" ? "Idea Supported!" : "Support Withdrawn",
-      description: "Your vote has been recorded.",
+
+    const result = await voteService.addVote({
+      idea_id: idea.id,
+      user_id: user.id,
+      vote_type: voteType
     })
-  }, [user, onVote, idea.id, toast])
+
+    if (result.success) {
+      // Update local state based on action
+      if (result.action === 'removed') {
+        setVoteCount(prev => prev + (currentVote === 'upvote' ? -1 : 1))
+        setCurrentVote(null)
+      } else if (result.action === 'updated') {
+        setVoteCount(prev => prev + (voteType === 'upvote' ? 2 : -2))
+        setCurrentVote(voteType)
+      } else {
+        setVoteCount(prev => prev + (voteType === 'upvote' ? 1 : -1))
+        setCurrentVote(voteType)
+      }
+
+      // Notify parent component about the vote change
+      await onVote(idea.id, voteType)
+    }
+  }, [user, idea.id, currentVote, toast, onVote])
 
   return (
     <Card className="flex flex-col justify-between w-full hover:shadow-lg transition-shadow duration-300 bg-card">
@@ -93,8 +125,16 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => handleVote("upvote")}>
-                  <ChevronUp className="h-4 w-4 text-green-500" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleVote("upvote")}
+                  className={cn(currentVote === 'upvote' && "bg-green-100")}
+                >
+                  <ChevronUp className={cn(
+                    "h-4 w-4",
+                    currentVote === 'upvote' ? "text-green-600" : "text-green-500"
+                  )} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -102,12 +142,20 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <span className="font-semibold text-card-foreground">{idea.upvotes - idea.downvotes}</span>
+          <span className="font-semibold text-card-foreground">{voteCount}</span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => handleVote("downvote")}>
-                  <ChevronDown className="h-4 w-4 text-red-500" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleVote("downvote")}
+                  className={cn(currentVote === 'downvote' && "bg-red-100")}
+                >
+                  <ChevronDown className={cn(
+                    "h-4 w-4",
+                    currentVote === 'downvote' ? "text-red-600" : "text-red-500"
+                  )} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

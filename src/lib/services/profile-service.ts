@@ -28,8 +28,4 @@ export const profileService = {
       return { success: false, error: err }
     }
   },
-
-  async getProfile(userId: string) {
-    // Implementation
-  }
 } 
