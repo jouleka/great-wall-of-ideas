@@ -2,11 +2,12 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { createClientComponentClient, User } from '@supabase/auth-helpers-nextjs'
+import { authService } from '@/lib/services/auth-service'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (emailOrUsername: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<{ user: User | null; error: Error | null }>
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
@@ -43,10 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase])
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-  }, [supabase])
+  const signIn = useCallback(async (emailOrUsername: string, password: string) => {
+    try {
+      const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password)
+      if (error) throw error
+    } catch (error) {
+      throw error
+    }
+  }, [])
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
     try {

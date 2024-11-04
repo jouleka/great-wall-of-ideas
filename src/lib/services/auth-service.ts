@@ -91,5 +91,45 @@ export const authService = {
       )
       return { success: false, error: err }
     }
+  },
+
+  async signInWithEmailOrUsername(emailOrUsername: string, password: string) {
+    try {
+      // First, check if input is an email
+      const isEmail = emailOrUsername.includes('@')
+      
+      if (isEmail) {
+        // If it's an email, use direct signin
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailOrUsername,
+          password,
+        })
+        
+        if (error) throw error
+        return { session: data.session, error: null }
+      } else {
+        // If it's a username, use our database function to get the email
+        const { data: emailData, error: emailError } = await supabase
+          .rpc('get_user_email_by_username', {
+            username_input: emailOrUsername
+          })
+
+        if (emailError || !emailData) {
+          throw new Error('Username not found')
+        }
+
+        // Sign in with the retrieved email
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailData,
+          password,
+        })
+
+        if (error) throw error
+        return { session: data.session, error: null }
+      }
+    } catch (err) {
+      console.error('Error in signInWithEmailOrUsername:', err)
+      throw err
+    }
   }
 } 

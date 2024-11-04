@@ -46,6 +46,17 @@ const registerSchema = z.object({
 
 type RegisterInputs = z.infer<typeof registerSchema>
 
+// Add login schema
+const loginSchema = z.object({
+  emailOrUsername: z
+    .string()
+    .min(3, "Please enter a valid email or username")
+    .max(254, "Input is too long"),
+  password: z.string().min(1, "Password is required")
+})
+
+type LoginInputs = z.infer<typeof loginSchema>
+
 export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
@@ -59,18 +70,20 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterInputs>({
     resolver: zodResolver(registerSchema)
   })
+  const { 
+    register: registerLogin, 
+    handleSubmit: handleLoginSubmit, 
+    formState: { errors: loginErrors } 
+  } = useForm<LoginInputs>({
+    resolver: zodResolver(loginSchema)
+  })
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const onLoginSubmit = async (data: LoginInputs) => {
     setIsEmailLoading(true)
     setError(null)
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-
     try {
-      await signIn(email, password)
+      await signIn(data.emailOrUsername, data.password)
       toast.success("Welcome back!")
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -207,14 +220,37 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="Enter your email" required className="bg-white/50" />
+                <Label htmlFor="emailOrUsername">Email or Username</Label>
+                <Input 
+                  {...registerLogin("emailOrUsername")}
+                  id="emailOrUsername"
+                  placeholder="Enter your email or username" 
+                  className={cn(
+                    "bg-white/50",
+                    loginErrors.emailOrUsername && "border-red-500 focus-visible:ring-red-500"
+                  )}
+                />
+                {loginErrors.emailOrUsername && (
+                  <p className="text-sm text-red-500">{loginErrors.emailOrUsername.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder="Enter your password" required className="bg-white/50" />
+                <Input 
+                  {...registerLogin("password")}
+                  id="password" 
+                  type="password" 
+                  placeholder="Enter your password"
+                  className={cn(
+                    "bg-white/50",
+                    loginErrors.password && "border-red-500 focus-visible:ring-red-500"
+                  )}
+                />
+                {loginErrors.password && (
+                  <p className="text-sm text-red-500">{loginErrors.password.message}</p>
+                )}
               </div>
               <Button 
                 type="submit" 
