@@ -1,5 +1,6 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
+import { validatePassword, validatePasswordConfirmation } from '@/lib/utils/validation'
 
 const supabase = createClientComponentClient()
 
@@ -43,15 +44,16 @@ export const authService = {
   // Update password (both direct change and reset)
   async updatePassword({ currentPassword, newPassword, confirmPassword }: UpdatePasswordOptions) {
     try {
-      // Validate passwords match
-      if (newPassword !== confirmPassword) {
-        throw new Error("New passwords don't match")
+      // Validate password
+      const passwordValidation = validatePassword(newPassword)
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.error)
       }
 
-      // Validate password strength
-      const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/
-      if (!passwordRegex.test(newPassword)) {
-        throw new Error("Password must be at least 8 characters long, contain 1 number and 1 uppercase letter")
+      // Validate confirmation
+      const confirmValidation = validatePasswordConfirmation(newPassword, confirmPassword)
+      if (!confirmValidation.isValid) {
+        throw new Error(confirmValidation.error)
       }
 
       // If currentPassword is provided, verify it first

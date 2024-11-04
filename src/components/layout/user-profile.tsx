@@ -18,6 +18,7 @@ import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils/utils"
 import { getInitials } from "@/lib/utils/string-utils"
+import { useRouter } from "next/navigation"
 
 const MAX_DISPLAY_NAME_LENGTH = 20
 const MAX_USERNAME_LENGTH = 25
@@ -30,6 +31,7 @@ export function UserProfile() {
   const [isOpen, setIsOpen] = useState(false)
   const { user, signOut, isLoading } = useAuth()
   const [avatarError, setAvatarError] = useState(false)
+  const router = useRouter()
 
   if (isLoading) {
     return (
@@ -58,6 +60,12 @@ export function UserProfile() {
   const username = user.profile?.username ? truncateText(user.profile.username, MAX_USERNAME_LENGTH) : ''
   const avatarUrl = avatarError ? '' : (user.profile?.avatar_url || '')
   const initials = getInitials(rawDisplayName)
+
+  const handleLogout = async () => {
+    setIsOpen(false) // Close dropdown before signing out
+    await signOut()
+    router.refresh() // Force refresh the page after logout
+  }
 
   return (
     <div className="relative flex items-center space-x-4">
@@ -132,10 +140,7 @@ export function UserProfile() {
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             className="p-3 cursor-pointer text-red-500 focus:text-red-500" 
-            onClick={() => {
-              setIsOpen(false) // Close dropdown before signing out
-              signOut()
-            }}
+            onClick={handleLogout}
           >
             <LogOut className="mr-3 h-5 w-5 shrink-0" />
             <span className="font-medium">Log out</span>

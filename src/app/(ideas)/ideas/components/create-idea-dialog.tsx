@@ -1,14 +1,15 @@
 import React, { useCallback, useState } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import dynamic from 'next/dynamic'
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { Idea } from "@/lib/types/idea"
+import { useRouter } from 'next/navigation'
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -33,16 +34,14 @@ type FormInputs = {
 
 export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInputs>()
-  const { toast } = useToast()
   const { user } = useAuth()
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const onSubmit: SubmitHandler<FormInputs> = useCallback(async (data: FormInputs) => {
     if (!user || !user.profile) {
-      toast({
-        title: "Hold on!",
-        description: "You need to be logged in to share your brilliant idea.",
-        variant: "destructive"
+      toast("Hold on!", {
+        description: "You need to be logged in to share your brilliant idea."
       })
       return
     }
@@ -58,21 +57,47 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
         is_featured: false
       })
       reset()
-      toast({
-        title: "Idea Launched!",
-        description: "Your brilliant idea is now live on the Great Wall!",
+      toast("Idea Launched!", {
+        description: "Your brilliant idea is now live on the Great Wall!"
       })
     } catch (error) {
       console.error('Error creating idea:', error)
-      toast({
-        title: "Uh-oh!",
-        description: "We couldn't add your idea right now. Give it another shot!",
-        variant: "destructive"
+      toast("Uh-oh!", {
+        description: "We couldn't add your idea right now. Give it another shot!"
       })
     } finally {
       setIsSubmitting(false)
     }
-  }, [user, createIdea, reset, toast])
+  }, [user, createIdea, reset])
+
+  if (!user) {
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Lightbulb className="h-4 w-4" />
+            Share Your Idea
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              Please sign in or create an account to share your ideas with the community.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => router.push('/auth?redirectTo=/ideas')}>
+              Sign In
+            </Button>
+            <Button onClick={() => router.push('/auth?tab=register&redirectTo=/ideas')}>
+              Create Account
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog>

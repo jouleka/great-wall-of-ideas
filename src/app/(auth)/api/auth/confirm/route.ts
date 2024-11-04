@@ -6,7 +6,8 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const token_hash = requestUrl.searchParams.get('token_hash')
   const type = requestUrl.searchParams.get('type')
-  const redirectUrl = requestUrl.searchParams.get('redirectUrl') ?? '/auth'
+  const next = requestUrl.searchParams.get('next')
+  const redirectUrl = next ?? '/auth'
 
   // Return early if no token hash
   if (!token_hash) {
@@ -28,9 +29,9 @@ export async function GET(request: Request) {
       )
     }
 
-    // Redirect to reset password page
+    // Always redirect to reset password page for recovery
     return NextResponse.redirect(
-      `${requestUrl.origin}/auth/reset-password`
+      `${requestUrl.origin}/auth/reset-password?verified=true`
     )
   }
 

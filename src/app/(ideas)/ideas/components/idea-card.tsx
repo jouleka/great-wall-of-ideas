@@ -9,10 +9,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge"
 import { Idea } from "@/lib/types/idea"
 import { useIdeaIcon, useIdeaBadge } from "@/lib/utils/idea-utils"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils/utils"
 import { voteService } from "@/lib/services/vote-service"
+import { useRouter } from "next/navigation"
 
 interface IdeaCardProps {
   idea: Idea
@@ -20,8 +21,8 @@ interface IdeaCardProps {
 }
 
 const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
-  const { toast } = useToast()
   const { user } = useAuth()
+  const router = useRouter()
   const IconComponent = useIdeaIcon(idea)
   const ideaBadge = useIdeaBadge(idea)
   const [voteCount, setVoteCount] = useState(idea.upvotes - idea.downvotes)
@@ -30,19 +31,25 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
   // Load current user's vote when component mounts
   useEffect(() => {
     async function loadCurrentVote() {
-      if (!user) return
+      if (!user) {
+        setCurrentVote(null)
+        setVoteCount(idea.upvotes - idea.downvotes)
+        return
+      }
       const vote = await voteService.getCurrentVote(idea.id, user.id)
       setCurrentVote(vote)
     }
     loadCurrentVote()
-  }, [idea.id, user])
+  }, [idea.id, user, idea.upvotes, idea.downvotes])
 
   const handleVote = useCallback(async (voteType: "upvote" | "downvote") => {
     if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to vote.",
-        variant: "destructive"
+      toast("Authentication Required", {
+        description: "Please sign in to vote on ideas.",
+        action: {
+          label: "Sign In",
+          onClick: () => router.push('/auth?redirectTo=/ideas')
+        }
       })
       return
     }
@@ -69,7 +76,7 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
       // Notify parent component about the vote change
       await onVote(idea.id, voteType)
     }
-  }, [user, idea.id, currentVote, toast, onVote])
+  }, [user, idea.id, currentVote, router, onVote])
 
   return (
     <Card className="flex flex-col justify-between w-full hover:shadow-lg transition-shadow duration-300 bg-card">

@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils/utils"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { authService } from "@/lib/services/auth-service"
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { passwordChangeSchema, PASSWORD_REQUIREMENTS, type PasswordChangeInputs } from '@/lib/utils/validation'
 
 interface ProfileFormData {
   full_name: string
@@ -41,18 +44,24 @@ export function ProfileContent() {
     bio: ''
   })
   const [isResettingPassword, setIsResettingPassword] = useState(false)
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [initialFormData, setInitialFormData] = useState<ProfileFormData>({
+    full_name: '',
+    username: '',
+    website: '',
+    bio: ''
+  })
   
   const supabase = createClientComponentClient()
   const debouncedFormData = useDebounce(formData, 500)
   const router = useRouter()
+
+  const { register: registerPassword, handleSubmit: handlePasswordSubmit, formState: { errors: passwordErrors } } = 
+    useForm<PasswordChangeInputs>({
+      resolver: zodResolver(passwordChangeSchema)
+    })
 
   // Load profile data when component mounts
   useEffect(() => {
@@ -70,12 +79,14 @@ export function ProfileContent() {
         if (fetchError) throw fetchError
         
         if (data) {
-          setFormData({
+          const initialData = {
             full_name: data.full_name || '',
             username: data.username || '',
             website: data.website || '',
             bio: data.bio || ''
-          })
+          }
+          setFormData(initialData)
+          setInitialFormData(initialData) // Store initial data
         }
       } catch (err) {
         console.error('Error loading profile:', err)
@@ -176,6 +187,14 @@ export function ProfileContent() {
         throw updateError
       }
       
+      // Update initialFormData with the new values after successful save
+      setInitialFormData({
+        full_name: formData.full_name.trim(),
+        username: formData.username.trim(),
+        website: formData.website.trim(),
+        bio: formData.bio.trim()
+      })
+      
       // Refresh the user data in the auth context
       await refreshUser()
       toast.success("Profile updated successfully!")
@@ -189,13 +208,26 @@ export function ProfileContent() {
   }
 
   // Add a function to check if form is valid
+  function hasFormChanges(): boolean {
+    return (
+      initialFormData.full_name.trim() !== formData.full_name.trim() ||
+      initialFormData.username.trim() !== formData.username.trim() ||
+      initialFormData.website.trim() !== formData.website.trim() ||
+      initialFormData.bio.trim() !== formData.bio.trim()
+    )
+  }
+
   function isFormValid() {
-    // Username is the only required field and must not have errors
+    // First check if there are any changes
+    if (!hasFormChanges()) {
+      return false
+    }
+
+    // Then check other validation rules
     if (!formData.username || errors.username) {
       return false
     }
 
-    // Website is optional but if provided must be valid
     if (formData.website && errors.website) {
       return false
     }
@@ -216,31 +248,38 @@ export function ProfileContent() {
     setIsResettingPassword(false)
   }
 
-  async function handleDirectPasswordChange() {
-    if (!user?.email) return
-    
-    setIsUpdatingPassword(true)
-    setIsResettingPassword(false)
-    setPasswordError(null)
+  const onPasswordSubmit: SubmitHandler<PasswordChangeInputs> = async (data) => {
+    const handlePasswordFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      if (!user?.email) return
+      
+      // Don't proceed if any required field is empty
+      if (!data.currentPassword || !data.newPassword || !data.confirmPassword) {
+        setPasswordError("All password fields are required")
+        return
+      }
+      
+      setIsUpdatingPassword(true)
+      setIsResettingPassword(false)
+      setPasswordError(null)
 
-    const { success, error } = await authService.updatePassword({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-      confirmPassword: passwordData.confirmPassword
-    })
-
-    if (success) {
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      authService.updatePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword
+      }).then(({ success, error }) => {
+        if (success) {
+          setIsPasswordDialogOpen(false)
+        } else if (error) {
+          setPasswordError(error instanceof Error ? error.message : "Failed to update password")
+        }
+        setIsUpdatingPassword(false)
       })
-      setIsPasswordDialogOpen(false)
-    } else if (error) {
-      setPasswordError(error instanceof Error ? error.message : "Failed to update password")
     }
-    
-    setIsUpdatingPassword(false)
+
+    handlePasswordFormSubmit(data as unknown as React.FormEvent)
   }
 
   if (isLoading) {
@@ -367,50 +406,81 @@ export function ProfileContent() {
                     <DialogHeader>
                       <DialogTitle>Change Password</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handlePasswordSubmit(onPasswordSubmit)()
+                      }} 
+                      className="space-y-4 py-4"
+                    >
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="currentPassword">Current Password</Label>
                           <Input
-                            id="currentPassword"
+                            {...registerPassword("currentPassword")}
                             type="password"
-                            value={passwordData.currentPassword}
-                            onChange={e => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                             placeholder="Enter your current password"
                             disabled={isResettingPassword}
+                            className={cn(
+                              passwordErrors.currentPassword && "border-red-500 focus-visible:ring-red-500"
+                            )}
                           />
+                          {passwordErrors.currentPassword && (
+                            <p className="text-sm text-red-500">
+                              {passwordErrors.currentPassword.message?.toString() || "Invalid password"}
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="newPassword">New Password</Label>
                           <Input
-                            id="newPassword"
+                            {...registerPassword("newPassword")}
                             type="password"
-                            value={passwordData.newPassword}
-                            onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                             placeholder="Enter new password"
                             disabled={isResettingPassword}
+                            className={cn(
+                              passwordErrors.newPassword && "border-red-500 focus-visible:ring-red-500"
+                            )}
                           />
+                          {passwordErrors.newPassword && (
+                            <p className="text-sm text-red-500">
+                              {passwordErrors.newPassword.message?.toString() || "Invalid password"}
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="confirmPassword">Confirm New Password</Label>
                           <Input
-                            id="confirmPassword"
+                            {...registerPassword("confirmPassword")}
                             type="password"
-                            value={passwordData.confirmPassword}
-                            onChange={e => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                             placeholder="Confirm new password"
                             disabled={isResettingPassword}
+                            className={cn(
+                              passwordErrors.confirmPassword && "border-red-500 focus-visible:ring-red-500"
+                            )}
                           />
+                          {passwordErrors.confirmPassword && (
+                            <p className="text-sm text-red-500">
+                              {passwordErrors.confirmPassword.message?.toString() || "Passwords don't match"}
+                            </p>
+                          )}
                         </div>
                         {passwordError && (
                           <p className="text-sm text-destructive">{passwordError}</p>
                         )}
                       </div>
                       
+                      <ul className="text-xs text-muted-foreground space-y-1 mt-2">
+                        {PASSWORD_REQUIREMENTS.map((req, index) => (
+                          <li key={index}>{req}</li>
+                        ))}
+                      </ul>
+
                       <div className="flex flex-col gap-4">
                         <Button
-                          onClick={handleDirectPasswordChange}
-                          disabled={isUpdatingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                          type="submit"
+                          disabled={isUpdatingPassword || isResettingPassword}
                         >
                           {isUpdatingPassword ? (
                             <>
@@ -456,7 +526,7 @@ export function ProfileContent() {
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </form>
                   </DialogContent>
                 </Dialog>
 
@@ -465,7 +535,7 @@ export function ProfileContent() {
                   disabled={isSaving || !isFormValid()}
                   className="min-w-[120px]"
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? 'Saving...' : hasFormChanges() ? 'Save Changes' : 'No Changes'}
                 </Button>
               </div>
             </div>

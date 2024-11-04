@@ -1,31 +1,33 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
-import { AuthForm } from "@/app/(auth)/auth/components/auth-form"
+import { AuthForm } from "./components/auth-form"
 
 export default function AuthPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, isLoading } = useAuth()
+  const redirectTo = searchParams.get('redirectTo') || '/ideas'
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.push('/ideas')
+      router.push(redirectTo)
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading, router, redirectTo])
 
   if (isLoading) {
     return <div>Loading...</div>
   }
 
   if (user) {
-    return null // This will prevent a flash of content before redirecting
+    return null
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <AuthForm />
+      <AuthForm defaultTab={searchParams.get('tab') || 'login'} />
     </div>
   )
 }
