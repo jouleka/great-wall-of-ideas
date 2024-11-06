@@ -10,6 +10,15 @@ const publicAuthRoutes = ['/auth/reset-password'];
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
+
+  // Refresh session if expired
+  await supabase.auth.getSession();
+
+  // Handle OAuth callback
+  if (req.nextUrl.pathname === '/api/auth/callback-route') {
+    return res;
+  }
+
   const { pathname } = req.nextUrl;
 
   const {

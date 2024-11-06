@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Rat } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { authService } from '@/lib/services/auth-service'
 import { useRouter } from 'next/navigation'
@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/lib/utils/utils'
+import Image from 'next/image'
 
 interface AuthFormProps {
   defaultTab?: string;
@@ -137,6 +138,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const handleGoogleAuth = async () => {
     setIsGoogleLoading(true)
     setError(null)
+
     try {
       await signInWithGoogle()
     } catch (err) {
@@ -360,31 +362,36 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             <span className="w-full border-t border-primary/20" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or</span>
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
           </div>
         </div>
 
-        <div className="flex flex-col w-full gap-2">
-          <Button 
-            variant="outline" 
-            className="w-full bg-white hover:bg-gray-100" 
-            onClick={handleGoogleAuth} 
-            disabled={isGoogleLoading || isEmailLoading}
-          >
-            {isGoogleLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <Rat className="mr-2 h-4 w-4" />
-                Continue with Google
-              </>
-            )}
-          </Button>
+        <Button 
+          variant="outline" 
+          className="w-full bg-white hover:bg-gray-100" 
+          onClick={handleGoogleAuth}
+          disabled={isGoogleLoading || isEmailLoading}
+        >
+          {isGoogleLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Connecting...
+            </>
+          ) : (
+            <>
+              <Image
+                src="/google.svg"
+                alt="Google"
+                width={16}
+                height={16}
+                className="mr-2"
+              />
+              Google
+            </>
+          )}
+        </Button>
 
-          <Button 
+        <Button 
             variant="ghost" 
             className="w-full" 
             onClick={handleContinueAsGuest}
@@ -392,7 +399,6 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
           >
             Continue as Guest
           </Button>
-        </div>
       </CardFooter>
     </Card>
   )

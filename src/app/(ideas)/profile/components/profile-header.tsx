@@ -2,17 +2,38 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Camera } from "lucide-react"
+import { Camera, Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { getInitials } from "@/lib/utils/string-utils"
 import { motion } from "framer-motion"
 import { ActivityGraph } from "@/components/layout/activity-graph"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActivityData } from "@/hooks/use-activity-data"
+import { useCallback, useState } from 'react'
+import { uploadProfileImage } from '@/lib/utils/image-utils'
+import { toast } from 'sonner'
 
 export function ProfileHeader() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { data, isLoading } = useActivityData(user?.id)
+  const [isUploading, setIsUploading] = useState(false)
+  
+  const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user?.id) return
+    
+    setIsUploading(true)
+    try {
+      await uploadProfileImage(file, user.id)
+      await refreshUser()
+      toast.success('Profile image updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update image')
+    } finally {
+      setIsUploading(false)
+      event.target.value = '' // Reset input
+    }
+  }, [user?.id, refreshUser])
   
   if (!user?.profile) return null
   
@@ -27,14 +48,12 @@ export function ProfileHeader() {
   
   return (
     <div className="relative w-full mb-8">
-      {/* Activity Graph Background */}
       <ActivityGraph />
       
-      {/* Profile Content */}
       <div className="relative pt-20 pb-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col items-center sm:flex-row sm:items-end sm:space-x-6">
-            {/* Avatar */}
+            {/* Avatar Upload Section */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -44,17 +63,35 @@ export function ProfileHeader() {
               <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
                 <AvatarImage 
                   src={user.profile.avatar_url || ''} 
-                  alt={user.profile.username || ''} 
+                  alt={user.profile.username || ''}
+                  onError={(e) => e.currentTarget.src = ''}
                 />
                 <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
               </Avatar>
-              <Button
-                size="icon"
-                variant="secondary"
-                className="absolute bottom-0 right-0 rounded-full shadow-lg"
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
+              <div className="absolute bottom-0 right-0 z-10">
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                />
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="rounded-full"
+                  disabled={isUploading}
+                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                  type="button"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </motion.div>
 
             {/* Profile Info */}

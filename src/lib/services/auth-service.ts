@@ -131,5 +131,29 @@ export const authService = {
       console.error('Error in signInWithEmailOrUsername:', err)
       throw err
     }
+  },
+
+  async signInWithGoogle() {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (err) {
+      console.error('Error signing in with Google:', err)
+      toast.error(
+        "Google sign in failed", 
+        { description: err instanceof Error ? err.message : "Please try again later." }
+      )
+      throw err
+    }
   }
 } 
