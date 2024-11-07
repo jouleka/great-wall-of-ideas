@@ -1,17 +1,22 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
+import { Idea } from '@/lib/types/idea'
 
-const supabase = createClientComponentClient()
+const PAGE_SIZE = 12
 
 interface IdeaData {
   title: string
   description: string
   tags?: string[]
   is_anonymous?: boolean
+  user_id: string
+  author_name: string
 }
 
 export const ideaService = {
   async createIdea(data: IdeaData) {
+    const supabase = createClientComponentClient()
+    
     try {
       const { error } = await supabase
         .from('ideas')
@@ -28,15 +33,28 @@ export const ideaService = {
     }
   },
 
-  async updateIdea(id: string, data: Partial<IdeaData>) {
-    // Implementation
-  },
+  async getIdeas(page: number) {
+    const supabase = createClientComponentClient()
+    
+    try {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
 
-  async deleteIdea(id: string) {
-    // Implementation
-  },
+      const { data, error, count } = await supabase
+        .from('ideas')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to)
 
-  async getIdeas() {
-    // Implementation
+      if (error) throw error
+
+      return {
+        data: data as Idea[],
+        hasMore: count ? from + PAGE_SIZE < count : false
+      }
+    } catch (error) {
+      console.error('Error fetching ideas:', error)
+      throw error
+    }
   }
 } 

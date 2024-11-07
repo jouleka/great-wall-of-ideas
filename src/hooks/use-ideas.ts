@@ -1,63 +1,83 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Idea } from "@/lib/types/idea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useToast } from "@/hooks/use-toast"
-
-const supabase = createClientComponentClient()
-const ITEMS_PER_PAGE = 20
+import { toast } from "sonner"
+import { ideaService } from '@/lib/services/idea-service'
 
 export function useIdeas() {
   const [ideas, setIdeas] = useState<Idea[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const pageRef = useRef(0)
-  const { toast } = useToast()
+  const isFetchingRef = useRef(false)
+  const supabase = createClientComponentClient()
 
-  const fetchIdeas = useCallback(async (loadMore = false) => {
-    if (loading || (!loadMore && ideas.length > 0)) return
-
-    setLoading(true)
-    setError(null)
+  const loadIdeas = useCallback(async (page: number) => {
+    if (isFetchingRef.current) return
+    
     try {
-      const { data, error } = await supabase
-        .from('ideas')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(pageRef.current * ITEMS_PER_PAGE, (pageRef.current + 1) * ITEMS_PER_PAGE - 1)
-
-      if (error) throw error
-
-      setIdeas(prevIdeas => loadMore ? [...prevIdeas, ...data] : data)
-      setHasMore(data.length === ITEMS_PER_PAGE)
-      if (loadMore) pageRef.current += 1
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
-      setError(errorMessage)
-      toast({
-        title: "Error",
-        description: `Failed to fetch ideas: ${errorMessage}`,
-        variant: "destructive",
+      isFetchingRef.current = true
+      const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page)
+      
+      setIdeas(prev => {
+        // Deduplicate ideas based on id
+        const newIdeas = page === 0 ? data : [...prev, ...data]
+        const uniqueIdeas = Array.from(
+          new Map(newIdeas.map(item => [item.id, item])).values()
+        )
+        return uniqueIdeas
       })
+      
+      setHasMore(moreAvailable)
+      pageRef.current = page
+    } catch (error) {
+      console.error('Error loading ideas:', error)
+      toast.error("Failed to load ideas")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
+      isFetchingRef.current = false
     }
-  }, [toast, loading, ideas.length])
+  }, [])
+
+  const resetIdeas = useCallback(() => {
+    setIdeas([])
+    setHasMore(true)
+    setIsLoading(true)
+    pageRef.current = 0
+    isFetchingRef.current = false
+    loadIdeas(0)
+  }, [loadIdeas])
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || isFetchingRef.current) return
+    loadIdeas(pageRef.current + 1)
+  }, [hasMore, loadIdeas])
 
   useEffect(() => {
-    fetchIdeas()
-  }, [fetchIdeas])
+    loadIdeas(0)
+    return () => {
+      setIdeas([])
+      pageRef.current = 0
+    }
+  }, [loadIdeas])
 
   const handleVote = useCallback(async (ideaId: string, voteType: 'upvote' | 'downvote') => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User must be logged in to vote')
+      if (!user) {
+        toast.error("Please sign in to vote")
+        return
+      }
 
-      // Optimistically update the UI
-      setIdeas(prevIdeas => 
-        prevIdeas.map(idea => 
+      // Optimistic update
+      setIdeas(prev => 
+        prev.map(idea => 
           idea.id === ideaId 
-            ? { ...idea, [voteType === 'upvote' ? 'upvotes' : 'downvotes']: idea[voteType === 'upvote' ? 'upvotes' : 'downvotes'] + 1 }
+            ? {
+                ...idea,
+                [voteType === 'upvote' ? 'upvotes' : 'downvotes']: 
+                  idea[voteType === 'upvote' ? 'upvotes' : 'downvotes'] + 1
+              }
             : idea
         )
       )
@@ -70,66 +90,42 @@ export function useIdeas() {
 
       if (error) throw error
 
-      // Fetch the updated idea to ensure consistency
-      const { data: updatedIdea, error: fetchError } = await supabase
-        .from('ideas')
-        .select('*')
-        .eq('id', ideaId)
-        .single()
-
-      if (fetchError) throw fetchError
-
-      setIdeas(prevIdeas => prevIdeas.map(idea => idea.id === ideaId ? updatedIdea : idea))
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
-      toast({
-        title: "Error",
-        description: `Failed to register vote: ${errorMessage}`,
-        variant: "destructive",
-      })
-      // Revert the optimistic update
-      fetchIdeas()
+    } catch (error) {
+      console.error('Error voting:', error)
+      toast.error("Failed to register vote")
+      // Revert optimistic update
+      loadIdeas(pageRef.current)
     }
-  }, [fetchIdeas, toast])
+  }, [supabase])
 
   const createIdea = useCallback(async (newIdea: Omit<Idea, 'id' | 'created_at' | 'updated_at' | 'upvotes' | 'downvotes' | 'views'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User must be logged in to create an idea')
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user.id)
-        .single()
-
-      const ideaToInsert = {
-        ...newIdea,
-        user_id: user.id,
-        author_name: newIdea.is_anonymous ? 'Anonymous' : (profile?.username || user.email || 'Unknown')
+      if (!user) {
+        toast.error("Please sign in to create an idea")
+        return
       }
 
-      const { data: createdIdea, error } = await supabase
-        .from('ideas')
-        .insert([ideaToInsert])
-        .select()
-
-      if (error) throw error
-
-      setIdeas(prevIdeas => [createdIdea[0], ...prevIdeas])
-      toast({
-        title: "Success",
-        description: "Your idea has been created successfully.",
+      await ideaService.createIdea({
+        ...newIdea,
+        user_id: user.id,
+        author_name: newIdea.is_anonymous ? 'Anonymous' : user.email || 'Unknown'
       })
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
-      toast({
-        title: "Error",
-        description: `Failed to create idea: ${errorMessage}`,
-        variant: "destructive",
-      })
+
+      resetIdeas()
+    } catch (error) {
+      console.error('Error creating idea:', error)
+      toast.error("Failed to create idea")
     }
-  }, [toast])
+  }, [supabase, resetIdeas])
 
-  return { ideas, loading, error, hasMore, handleVote, createIdea, loadMore: () => fetchIdeas(true) }
+  return {
+    ideas,
+    isLoading,
+    hasMore,
+    handleVote,
+    createIdea,
+    loadMore,
+    resetIdeas
+  }
 }

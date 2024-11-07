@@ -2,7 +2,6 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from 'sonner'
 
 const supabase = createClientComponentClient()
-
 interface VoteData {
   idea_id: string
   vote_type: 'upvote' | 'downvote'
@@ -10,15 +9,36 @@ interface VoteData {
 
 export const voteService = {
   async getCurrentVote(ideaId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('votes')
-      .select('vote_type')
-      .eq('idea_id', ideaId)
-      .eq('user_id', userId)
-      .single()
+    
+    try {
+      const { data, error } = await supabase
+        .from('votes')
+        .select('vote_type')
+        .eq('idea_id', ideaId)
+        .eq('user_id', userId)
+        .maybeSingle()
 
-    if (error) return null
-    return data?.vote_type as 'upvote' | 'downvote' | null
+      if (error) {
+        // Handle 406 errors specifically
+        if (error.code === '406') {
+          await supabase.auth.refreshSession()
+          // Retry the request
+          const { data: retryData } = await supabase
+            .from('votes')
+            .select('vote_type')
+            .eq('idea_id', ideaId)
+            .eq('user_id', userId)
+            .maybeSingle()
+          return retryData?.vote_type || null
+        }
+        throw error
+      }
+
+      return data?.vote_type || null
+    } catch (error) {
+      console.error('Error getting vote:', error)
+      return null
+    }
   },
 
   async addVote(data: VoteData & { user_id: string }) {
