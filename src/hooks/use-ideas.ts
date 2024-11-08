@@ -3,6 +3,7 @@ import { Idea } from "@/lib/types/idea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { toast } from "sonner"
 import { ideaService } from '@/lib/services/idea-service'
+import { voteService } from '@/lib/services/vote-service'
 
 export function useIdeas() {
   const [ideas, setIdeas] = useState<Idea[]>([])
@@ -69,34 +70,93 @@ export function useIdeas() {
         return
       }
 
+      // Find the idea being voted on
+      const idea = ideas.find(i => i.id === ideaId)
+      if (!idea) return
+
+      // Store current state for rollback
+      const previousState = [...ideas]
+
+      // Get current vote before updating
+      const currentVote = await voteService.getCurrentVote(ideaId, user.id)
+
+      // Calculate new vote counts based on action
+      let newUpvotes = idea.upvotes
+      let newDownvotes = idea.downvotes
+
+      if (!currentVote) {
+        // Adding new vote
+        if (voteType === 'upvote') newUpvotes++
+        else newDownvotes++
+      } else if (currentVote === voteType) {
+        // Removing vote
+        if (voteType === 'upvote') newUpvotes--
+        else newDownvotes--
+      } else {
+        // Switching vote
+        if (voteType === 'upvote') {
+          newUpvotes++
+          newDownvotes--
+        } else {
+          newUpvotes--
+          newDownvotes++
+        }
+      }
+
       // Optimistic update
       setIdeas(prev => 
-        prev.map(idea => 
-          idea.id === ideaId 
+        prev.map(i => {
+          if (i.id !== ideaId) return i
+          return {
+            ...i,
+            upvotes: newUpvotes,
+            downvotes: newDownvotes
+          }
+        })
+      )
+
+      // Make the actual API call
+      const result = await voteService.handleVote(ideaId, user.id, voteType)
+
+      if (!result.success) {
+        // Revert on failure
+        setIdeas(previousState)
+        toast.error(result.message)
+        return
+      }
+
+      // Update with actual server counts
+      setIdeas(prev =>
+        prev.map(idea =>
+          idea.id === ideaId
             ? {
                 ...idea,
-                [voteType === 'upvote' ? 'upvotes' : 'downvotes']: 
-                  idea[voteType === 'upvote' ? 'upvotes' : 'downvotes'] + 1
+                upvotes: result.upvotes,
+                downvotes: result.downvotes
               }
             : idea
         )
       )
 
-      const { error } = await supabase.rpc('handle_vote', {
-        p_idea_id: ideaId,
-        p_user_id: user.id,
-        p_vote_type: voteType
-      })
-
-      if (error) throw error
+      // Show a single success message based on action
+      switch (result.action) {
+        case 'added':
+          toast.success(`Vote recorded`)
+          break
+        case 'removed':
+          toast.success('Vote removed')
+          break
+        case 'updated':
+          toast.success('Vote updated')
+          break
+      }
 
     } catch (error) {
       console.error('Error voting:', error)
       toast.error("Failed to register vote")
-      // Revert optimistic update
-      loadIdeas(pageRef.current)
+      loadIdeas(pageRef.current) // Reload to ensure consistency
     }
-  }, [supabase])
+  }, [supabase, ideas, loadIdeas])
 
   const createIdea = useCallback(async (newIdea: Omit<Idea, 'id' | 'created_at' | 'updated_at' | 'upvotes' | 'downvotes' | 'views'>) => {
     try {
@@ -109,7 +169,7 @@ export function useIdeas() {
       await ideaService.createIdea({
         ...newIdea,
         user_id: user.id,
-        author_name: newIdea.is_anonymous ? 'Anonymous' : user.email || 'Unknown'
+        author_name: newIdea.is_anonymous ? 'Anonymous' : user.user_metadata?.username || 'Unknown'
       })
 
       resetIdeas()

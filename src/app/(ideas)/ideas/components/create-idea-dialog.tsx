@@ -51,7 +51,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
       await createIdea({ 
         ...data, 
         user_id: user.id, 
-        author_name: data.is_anonymous ? "Anonymous" : (user.profile.username || user.profile.full_name || "Unknown"),
+        author_name: data.is_anonymous ? "Anonymous" : (user.profile.username || "Unknown"),
         tags: data.tags.split(',').map((tag: string) => tag.trim()),
         status: "pending",
         is_featured: false
