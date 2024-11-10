@@ -117,9 +117,9 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 p-6 border-b bg-background/95 sticky top-0 z-10">
+      <div className="flex items-center gap-2 p-6 border-b">
         <MessageSquare className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Discussion</h3>
+        <h3 className="text-lg font-semibold">Join the Conversation</h3>
       </div>
 
       <div className="flex flex-col h-full">
@@ -127,10 +127,10 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
         <ScrollArea className="flex-1 p-6">
           <AnimatePresence mode="popLayout">
             {comments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageSquare className="h-12 w-12 mb-4 opacity-20" />
-                <p className="text-sm">No comments yet</p>
-                <p className="text-xs mt-1">Be the first to share your thoughts!</p>
+                <p className="text-sm">Start the conversation!</p>
+                <p className="text-xs mt-1">Share your thoughts - don&apos;t be shy</p>
               </div>
             ) : (
               comments.map((comment) => (
@@ -179,29 +179,19 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
         <div className="border-t p-4 bg-background/95 sticky bottom-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Textarea
+              placeholder={user ? "What do you think about this?" : "Sign in to join the conversation"}
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder={user ? "Share your thoughts..." : "Sign in to comment"}
               disabled={!user || isSubmitting}
               className="min-h-[80px] resize-none bg-background"
             />
             <div className="flex justify-end">
               <Button 
                 type="submit"
-                disabled={!user || isSubmitting || !newComment.trim()}
+                disabled={!user || isSubmitting || !newComment.trim()}  
                 className="gap-2"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Posting...
-                  </>
-                ) : (
-                  <>
-                    <MessageSquare className="h-4 w-4" />
-                    Post Comment
-                  </>
-                )}
+                {isSubmitting ? "Sending..." : "Share Thought"}
               </Button>
             </div>
           </form>

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { createClientComponentClient, User } from '@supabase/auth-helpers-nextjs'
 import { authService } from '@/lib/services/auth-service'
+import { Loading } from "@/components/ui/loading"
 
 interface AuthContextType {
   user: User | null
@@ -99,7 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }), [user, loading, signIn, signUp, signOut, signInWithGoogle])
 
   if (loading) {
-    return <div>Loading...</div> // Or a more sophisticated loading component
+    return (
+      <div className="min-h-screen">
+        <Loading text="Setting things up..." />
+      </div>
+    )
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

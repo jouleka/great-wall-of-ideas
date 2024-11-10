@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo, useState, useEffect } from "react"
-import { ChevronUp, ChevronDown, Award, Flame, User } from "lucide-react"
+import { ChevronUp, ChevronDown, Award, Flame, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils/utils"
 import { voteService } from "@/lib/services/vote-service"
 import { useRouter } from "next/navigation"
 import { CommentSection } from "./comments/comment-section"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface IdeaCardProps {
   idea: Idea
@@ -28,6 +29,8 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
   const [voteCount, setVoteCount] = useState(idea.upvotes - idea.downvotes)
   const IconComponent = useIdeaIcon(idea.category)
   const ideaBadge = useIdeaBadge(idea.status)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
     // Update vote count when idea props change
@@ -99,46 +102,88 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
         <p className="text-sm text-card-foreground line-clamp-3">{idea.description}</p>
       </CardContent>
       <CardFooter className="flex justify-between items-center mt-auto pt-4">
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          setIsDescriptionExpanded(false)
+        }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               Explore Idea
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[900px] p-0 gap-0 overflow-hidden sm:h-[600px] h-[100dvh]">
+          <DialogContent className="flex flex-col sm:max-w-[900px] p-0 gap-0 h-screen sm:h-[90vh] w-full max-w-full overflow-hidden">
             {/* Mobile View */}
-            <div className="block sm:hidden h-full">
-              <div className="flex flex-col h-full">
-                {/* Idea Content */}
-                <div className="p-6 border-b">
-                  <DialogHeader>
-                    <div className="flex items-center justify-between">
-                      <DialogTitle className="flex items-center gap-2">
-                        <IconComponent className="w-5 h-5 text-primary" />
-                        {idea.title}
-                      </DialogTitle>
-                      <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
+            <div className="block sm:hidden h-full flex-col">
+              {/* Fixed Header */}
+              <div className="p-4 border-b bg-background/95 sticky top-0 z-10">
+                <DialogHeader>
+                  <div className="flex items-center justify-between">
+                    <DialogTitle className="flex items-center gap-2 max-w-[80%]">
+                      <IconComponent className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="line-clamp-1 text-base">{idea.title}</span>
+                    </DialogTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800 text-xs`}>
                         {ideaBadge?.text}
                       </Badge>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Close</span>
+                        </Button>
+                      </DialogTrigger>
                     </div>
-                    <DialogDescription className="flex items-center gap-2 mt-2">
-                      <Award className="w-4 h-4 text-blue-500" />
-                      {idea.company}
-                    </DialogDescription>
-                  </DialogHeader>
+                  </div>
+                  <DialogDescription className="flex items-center gap-2 mt-2 text-sm">
+                    <Award className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    {idea.company}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
 
-                  <div className="mt-4 space-y-4">
-                    <p className="text-card-foreground leading-relaxed">{idea.description}</p>
-                    
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="flex items-center">
+              {/* Scrollable Content */}
+              <ScrollArea className="flex-1">
+                <div className="p-4">
+                  <div className="space-y-4">
+                    {/* Description Section */}
+                    <div className="prose prose-sm dark:prose-invert max-w-full">
+                      <div className="relative">
+                        <p className="text-card-foreground leading-relaxed break-words text-sm max-w-full">
+                          {idea.description.length > 200 ? (
+                            <>
+                              <span className={cn(
+                                "block transition-all duration-300 whitespace-pre-wrap break-words",
+                                !isDescriptionExpanded && "line-clamp-4"
+                              )}>
+                                {idea.description}
+                              </span>
+                              <Button
+                                variant="link"
+                                className="px-0 h-auto font-medium text-primary"
+                                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                              >
+                                {isDescriptionExpanded ? "Show less" : "Read more"}
+                              </Button>
+                            </>
+                          ) : (
+                            <span className="whitespace-pre-wrap break-words">
+                              {idea.description}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Metadata and Actions */}
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="flex flex-col gap-2">
+                        <Badge variant="secondary" className="flex items-center w-fit">
                           <Flame className="w-4 h-4 mr-1 text-orange-500" />
                           {idea.upvotes - idea.downvotes} supports
                         </Badge>
                         <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-4 h-4 mr-1" />
-                          <span>{idea.author_name}</span>
+                          <User className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{idea.author_name}</span>
                         </div>
                       </div>
                       <VoteButtons 
@@ -152,99 +197,97 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                 </div>
 
                 {/* Comments Section */}
-                <div className="flex-1 overflow-hidden bg-muted/30">
+                <div className="border-t">
                   <CommentSection ideaId={idea.id} />
                 </div>
-              </div>
+              </ScrollArea>
             </div>
 
             {/* Desktop View */}
-            <div className="hidden sm:grid grid-cols-5 h-full">
-              <div className="col-span-3 p-6 overflow-y-auto border-r">
-                <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <DialogTitle className="flex items-center gap-2 text-2xl">
-                      <IconComponent className="w-6 h-6 text-primary" />
-                      {idea.title}
-                    </DialogTitle>
-                    <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
-                      {ideaBadge?.text}
-                    </Badge>
-                  </div>
-                  <DialogDescription className="flex items-center gap-2 mt-2">
-                    <Award className="w-4 h-4 text-blue-500" />
-                    {idea.company}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="mt-6 space-y-6">
-                  <div className="prose prose-sm dark:prose-invert">
-                    <p className="text-card-foreground leading-relaxed">{idea.description}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4">
-                    <div className="flex items-center gap-4">
-                      <Badge variant="secondary" className="flex items-center">
-                        <Flame className="w-4 h-4 mr-1 text-orange-500" />
-                        {idea.upvotes - idea.downvotes} supports
+            <div className="hidden sm:grid grid-cols-5 h-full overflow-hidden">
+              {/* Left Panel - Idea Details */}
+              <div className="col-span-3 flex flex-col h-full overflow-hidden">
+                {/* Fixed Header */}
+                <div className="p-6 border-b bg-background/95 sticky top-0 z-10">
+                  <DialogHeader>
+                    <div className="flex items-center justify-between">
+                      <DialogTitle className="flex items-center gap-2 text-2xl">
+                        <IconComponent className="w-6 h-6 text-primary" />
+                        {idea.title}
+                      </DialogTitle>
+                      <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
+                        {ideaBadge?.text}
                       </Badge>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <User className="w-4 h-4 mr-2" />
-                        <span>{idea.author_name}</span>
+                    </div>
+                    <DialogDescription className="flex items-center gap-2 mt-2">
+                      <Award className="w-4 h-4 text-blue-500" />
+                      {idea.company}
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+
+                {/* Scrollable Content */}
+                <ScrollArea className="flex-1 h-full">
+                  <div className="p-6 h-full">
+                    <div className="space-y-6">
+                      {/* Description Section */}
+                      <div className="prose prose-sm dark:prose-invert max-w-full">
+                        <div className="relative">
+                          <p className="text-card-foreground leading-relaxed break-words">
+                            {idea.description.length > 300 ? (
+                              <>
+                                <span className={cn(
+                                  "block transition-all duration-300 whitespace-pre-wrap break-words",
+                                  !isDescriptionExpanded && "line-clamp-6"
+                                )}>
+                                  {idea.description}
+                                </span>
+                                <Button
+                                  variant="link"
+                                  className="px-0 h-auto font-medium text-primary mt-2"
+                                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                >
+                                  {isDescriptionExpanded ? "Show less" : "Read more"}
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="whitespace-pre-wrap break-words">
+                                {idea.description}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Metadata and Actions */}
+                      <div className="flex items-center justify-between py-4 border-t space-y-4">
+                        <div className="flex flex-col gap-3">
+                          <Badge variant="secondary" className="flex items-center w-fit text-base">
+                            <Flame className="w-5 h-5 mr-2 text-orange-500" />
+                            {idea.upvotes - idea.downvotes} supports
+                          </Badge>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <User className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">{idea.author_name}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <VoteButtons 
+                            currentVote={currentVote}
+                            voteCount={voteCount}
+                            onUpvote={() => handleVote("upvote")}
+                            onDownvote={() => handleVote("downvote")}
+                            size="lg"
+                          />
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => handleVote("upvote")}
-                              className={cn(currentVote === 'upvote' && "bg-green-100")}
-                            >
-                              <ChevronUp className={cn(
-                                "h-4 w-4",
-                                currentVote === 'upvote' ? "text-green-600" : "text-green-500"
-                              )} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Support this idea</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      <span className="font-semibold text-card-foreground">{voteCount}</span>
-                      
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => handleVote("downvote")}
-                              className={cn(currentVote === 'downvote' && "bg-red-100")}
-                            >
-                              <ChevronDown className={cn(
-                                "h-4 w-4",
-                                currentVote === 'downvote' ? "text-red-600" : "text-red-500"
-                              )} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Withdraw support</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
                   </div>
-                </div>
+                </ScrollArea>
               </div>
 
-              {/* Comments Section - Takes up 2/5 of the space */}
-              <div className="col-span-2 bg-muted/30">
+              {/* Right Panel - Comments */}
+              <div className="col-span-2 border-l h-full overflow-hidden">
                 <CommentSection ideaId={idea.id} />
               </div>
             </div>
@@ -270,11 +313,16 @@ interface VoteButtonsProps {
   voteCount: number
   onUpvote: () => void
   onDownvote: () => void
+  size?: 'default' | 'lg'
 }
 
-function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote }: VoteButtonsProps) {
+function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote, size = 'default' }: VoteButtonsProps) {
+  const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4"
+  const buttonSize = size === 'lg' ? "h-10 w-10" : "h-8 w-8"
+  const textSize = size === 'lg' ? "text-lg" : "text-base"
+
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-3">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -282,10 +330,13 @@ function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote }: VoteButto
               variant="ghost" 
               size="icon" 
               onClick={onUpvote}
-              className={cn(currentVote === 'upvote' && "bg-green-100")}
+              className={cn(
+                buttonSize,
+                currentVote === 'upvote' && "bg-green-100"
+              )}
             >
               <ChevronUp className={cn(
-                "h-4 w-4",
+                iconSize,
                 currentVote === 'upvote' ? "text-green-600" : "text-green-500"
               )} />
             </Button>
@@ -296,7 +347,9 @@ function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote }: VoteButto
         </Tooltip>
       </TooltipProvider>
       
-      <span className="font-semibold text-card-foreground">{voteCount}</span>
+      <span className={cn("font-semibold text-card-foreground", textSize)}>
+        {voteCount}
+      </span>
       
       <TooltipProvider>
         <Tooltip>
@@ -305,10 +358,13 @@ function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote }: VoteButto
               variant="ghost" 
               size="icon" 
               onClick={onDownvote}
-              className={cn(currentVote === 'downvote' && "bg-red-100")}
+              className={cn(
+                buttonSize,
+                currentVote === 'downvote' && "bg-red-100"
+              )}
             >
               <ChevronDown className={cn(
-                "h-4 w-4",
+                iconSize,
                 currentVote === 'downvote' ? "text-red-600" : "text-red-500"
               )} />
             </Button>

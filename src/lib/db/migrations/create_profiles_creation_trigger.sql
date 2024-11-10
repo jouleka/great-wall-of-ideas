@@ -5,8 +5,11 @@ BEGIN
   INSERT INTO public.profiles (id, username, full_name, avatar_url, updated_at)
   VALUES (
     new.id,
-    new.raw_user_meta_data->>'username',
-    new.raw_user_meta_data->>'full_name',
+    COALESCE(
+      new.raw_user_meta_data->>'username',  -- Try to get username first (email signup)
+      new.raw_user_meta_data->>'full_name'  -- Fallback to full_name (Google auth)
+    ),
+    NULL,  -- Always leave full_name empty for user to set later
     new.raw_user_meta_data->>'avatar_url',
     now()
   );

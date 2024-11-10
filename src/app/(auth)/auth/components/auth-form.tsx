@@ -25,24 +25,45 @@ interface AuthFormProps {
 const registerSchema = z.object({
   username: z
     .string()
-    .min(3, "Username must be at least 3 characters")
-    .max(30, "Username cannot exceed 30 characters")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens")
-    .refine(val => !val.includes('admin'), "Username cannot contain 'admin'"),
+    .min(3, "Come on, your username needs at least 3 characters")
+    .max(30, "Let's keep it short and sweet - under 30 characters")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Just letters, numbers, and underscores - keeping it simple")
+    .refine(val => !val.toLowerCase().includes('admin'), "Nice try with 'admin' - maybe something more original?")
+    .refine(val => !val.toLowerCase().includes('mod'), "'mod' in username? Getting creative, aren't we?")
+    .refine(val => !val.toLowerCase().includes('root'), "'root'? Let's save that for the garden")
+    .refine(
+      val => !['password', 'username', 'admin123', 'test', 'user'].includes(val.toLowerCase()),
+      "That username might be a bit too obvious - try something unique"
+    ),
+
   email: z
     .string()
-    .email("Please enter a valid email address")
-    .min(5, "Email is too short")
-    .max(254, "Email is too long")
-    .refine(val => !val.endsWith('@temp.com'), "Temporary email addresses are not allowed"),
+    .email("Hmm, that doesn't look like a valid email")
+    .min(5, "Your email seems a bit too short")
+    .max(254, "That's quite a long email you've got there")
+    .refine(val => !val.endsWith('@temp.com'), "We'd prefer a real email - temporary ones are a bit sketchy")
+    .refine(val => !val.endsWith('@tempmail.com'), "Let's use your actual email - we promise to be nice")
+    .refine(val => !val.endsWith('@mailinator.com'), "Real emails only - we're not that scary")
+    .refine(
+      val => !['test', 'admin', 'info', 'support'].includes(val.split('@')[0].toLowerCase()),
+      "Something more personal would be great"
+    ),
+
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(100, "Password is too long")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
+    .min(8, "Eight characters minimum - security first!")
+    .max(100, "That's a bit long for a password, don't you think?")
+    .regex(
+      /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/,
+      "Password needs an uppercase letter, lowercase letter, number, and special character"
+    ),
+
+  confirmPassword: z
+    .string()
+    .min(1, "Don't forget to confirm your password")
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords need to match - double check them",
+  path: ["confirmPassword"]
 })
 
 type RegisterInputs = z.infer<typeof registerSchema>
@@ -71,10 +92,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterInputs>({
     resolver: zodResolver(registerSchema)
   })
-  const { 
-    register: registerLogin, 
-    handleSubmit: handleLoginSubmit, 
-    formState: { errors: loginErrors } 
+  const {
+    register: registerLogin,
+    handleSubmit: handleLoginSubmit,
+    formState: { errors: loginErrors }
   } = useForm<LoginInputs>({
     resolver: zodResolver(loginSchema)
   })
@@ -103,7 +124,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       const { user, error } = await signUp(data.email, data.password, data.username)
       if (error) throw error
       if (user) {
-        setSuccessMessage('Registration successful! Please check your email to confirm your account.')
+        setSuccessMessage('Almost there! Check your email to complete sign up.')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -122,10 +143,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
     setIsResettingPassword(true)
     try {
-      const { success } = await authService.sendPasswordResetEmail({ 
-        email: resetEmail 
+      const { success } = await authService.sendPasswordResetEmail({
+        email: resetEmail
       })
-      
+
       if (success) {
         setShowResetForm(false)
         setResetEmail("")
@@ -157,9 +178,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
-          <CardTitle>Reset Password</CardTitle>
+          <CardTitle>Forgot Your Password?</CardTitle>
           <CardDescription>
-            Enter your email address and we&apos;ll send you a password reset link.
+            No worries! Pop in your email and we&apos;ll help you get back in.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -177,8 +198,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={isResettingPassword}
               >
@@ -210,25 +231,27 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-primary">Welcome, Idea Explorer!</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center text-primary">
+          Hey there! 👋
+        </CardTitle>
         <CardDescription className="text-center text-secondary-foreground">
-          Join our creative community and build the future!
+          Ready to share your brilliant ideas with the world?
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="register">Join Us</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="emailOrUsername">Email or Username</Label>
-                <Input 
+                <Input
                   {...registerLogin("emailOrUsername")}
                   id="emailOrUsername"
-                  placeholder="Enter your email or username" 
+                  placeholder="Type your email or username"
                   className={cn(
                     "bg-white/50",
                     loginErrors.emailOrUsername && "border-red-500 focus-visible:ring-red-500"
@@ -240,10 +263,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input 
+                <Input
                   {...registerLogin("password")}
-                  id="password" 
-                  type="password" 
+                  id="password"
+                  type="password"
                   placeholder="Enter your password"
                   className={cn(
                     "bg-white/50",
@@ -254,9 +277,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   <p className="text-sm text-red-500">{loginErrors.password.message}</p>
                 )}
               </div>
-              <Button 
-                type="submit" 
-                className="w-full text-white" 
+              <Button
+                type="submit"
+                className="w-full text-white"
                 disabled={isEmailLoading}
               >
                 {isEmailLoading ? (
@@ -282,10 +305,10 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             <form onSubmit={handleSubmit(onRegisterSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input 
+                <Input
                   {...register("username")}
-                  id="username" 
-                  placeholder="Choose a username" 
+                  id="username"
+                  placeholder="Choose a username"
                   className={cn(
                     "bg-white/50",
                     errors.username && "border-red-500 focus-visible:ring-red-500"
@@ -298,11 +321,11 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input 
+                <Input
                   {...register("email")}
-                  id="email" 
-                  type="email" 
-                  placeholder="Enter your email" 
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
                   className={cn(
                     "bg-white/50",
                     errors.email && "border-red-500 focus-visible:ring-red-500"
@@ -315,11 +338,11 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input 
+                <Input
                   {...register("password")}
-                  id="password" 
-                  type="password" 
-                  placeholder="Create a password" 
+                  id="password"
+                  type="password"
+                  placeholder="Create a password"
                   className={cn(
                     "bg-white/50",
                     errors.password && "border-red-500 focus-visible:ring-red-500"
@@ -329,16 +352,16 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   <p className="text-sm text-red-500">{errors.password.message}</p>
                 )}
                 <ul className="text-xs text-muted-foreground space-y-1 mt-2">
-                  <li>• At least 8 characters long</li>
-                  <li>• Contains uppercase & lowercase letters</li>
-                  <li>• Contains numbers</li>
-                  <li>• Contains special characters</li>
+                  <li>• At least 12 characters long</li>
+                  <li>• Mix of upper & lowercase letters</li>
+                  <li>• Some numbers for good measure</li>
+                  <li>• A special character to spice it up</li>
                 </ul>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full text-white" 
+              <Button
+                type="submit"
+                className="w-full text-white"
                 disabled={isEmailLoading}
               >
                 {isEmailLoading ? (
@@ -362,13 +385,13 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
             <span className="w-full border-t border-primary/20" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">Quick access with</span>
           </div>
         </div>
 
-        <Button 
-          variant="outline" 
-          className="w-full bg-white hover:bg-gray-100" 
+        <Button
+          variant="outline"
+          className="w-full bg-white hover:bg-gray-100"
           onClick={handleGoogleAuth}
           disabled={isGoogleLoading || isEmailLoading}
         >
@@ -386,19 +409,19 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 height={16}
                 className="mr-2"
               />
-              Google
+              Continue with Google
             </>
           )}
         </Button>
 
-        <Button 
-            variant="ghost" 
-            className="w-full" 
-            onClick={handleContinueAsGuest}
-            disabled={isEmailLoading || isGoogleLoading}
-          >
-            Continue as Guest
-          </Button>
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={handleContinueAsGuest}
+          disabled={isEmailLoading || isGoogleLoading}
+        >
+          Just Browsing? Continue as Guest
+        </Button>
       </CardFooter>
     </Card>
   )

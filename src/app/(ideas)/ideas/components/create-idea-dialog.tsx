@@ -108,12 +108,17 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">Someone might build it</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-center">
+            Got a Bright Idea?
+          </DialogTitle>
+          <DialogDescription>
+            Share it with the world - you never know who might build it!
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
           <div>
             <Label htmlFor="title" className="text-lg font-semibold flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5" /> Idea Title
+              <Lightbulb className="mr-2 h-5 w-5" /> What&apos;s Your Idea?
             </Label>
             <Input
               id="title"
@@ -122,14 +127,14 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
                 maxLength: { value: 100, message: "Title must be less than 100 characters" }
               })}
               className="mt-1"
-              placeholder="What's your groundbreaking idea?"
+              placeholder="Give it a catchy title"
               aria-invalid={errors.title ? "true" : "false"}
             />
             {errors.title && <p role="alert" className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
           </div>
           <div>
             <Label htmlFor="description" className="text-lg font-semibold flex items-center">
-              <Target className="mr-2 h-5 w-5" /> Description
+              <Target className="mr-2 h-5 w-5" /> Tell Us More
             </Label>
             <Textarea
               id="description"
@@ -138,7 +143,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
                 minLength: { value: 20, message: "Description must be at least 20 characters long" }
               })}
               className="mt-1"
-              placeholder="Tell us more about your innovative concept"
+              placeholder="Paint us a picture - what makes this special?"
               rows={4}
               aria-invalid={errors.description ? "true" : "false"}
             />
@@ -146,13 +151,13 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
           </div>
           <div>
             <Label htmlFor="company" className="text-lg font-semibold flex items-center">
-              <Building className="mr-2 h-5 w-5" /> Company
+              <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
             </Label>
             <Input
               id="company"
               {...register("company", { required: "Company is required" })}
               className="mt-1"
-              placeholder="Where did this idea originate?"
+              placeholder="Which company could make this happen?"
               aria-invalid={errors.company ? "true" : "false"}
             />
             {errors.company && <p role="alert" className="text-red-500 text-sm mt-1">{errors.company.message}</p>}
@@ -198,7 +203,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              "Submitting..."
+              "One moment..."
             ) : (
               <>
                 <Sparkles className="mr-2 h-5 w-5" /> Add to the Great Wall

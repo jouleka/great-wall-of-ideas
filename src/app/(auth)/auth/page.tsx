@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { AuthForm } from "./components/auth-form"
+import { Loading } from "@/components/ui/loading"
 
 export default function AuthPage() {
   const router = useRouter()
@@ -18,7 +19,11 @@ export default function AuthPage() {
   }, [user, isLoading, router, redirectTo])
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="min-h-screen">
+        <Loading text="Getting ready..." />
+      </div>
+    )
   }
 
   if (user) {

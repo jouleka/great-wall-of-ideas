@@ -13,6 +13,7 @@ import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
 import { UserProfile } from "@/components/layout/user-profile"
 import { sessionUtils } from "@/lib/utils/session-utils"
+import { Loading } from "@/components/ui/loading"
 
 // Dynamically import heavy components
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { 
@@ -88,11 +89,8 @@ export default function GreatWallOfIdeas() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p>Loading ideas...</p>
-        </div>
+      <div className="min-h-screen">
+        <Loading text="Loading brilliant ideas..." />
       </div>
     )
   }
