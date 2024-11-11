@@ -22,6 +22,46 @@ interface IdeaCardProps {
   onVote: (ideaId: string, voteType: "upvote" | "downvote") => Promise<void>
 }
 
+// URL formatting function
+function formatTextWithLinks(text: string) {
+  const parts = text.split(/(\bhttps?:\/\/\S+\b)/gi);
+  
+  return parts.map((part, i) => {
+    if (part.match(/^https?:\/\//i)) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(part, '_blank');
+          }}
+        >
+          {part}
+          <svg
+            className="h-3 w-3 inline-block flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
   const { user } = useAuth()
   const router = useRouter()
@@ -99,7 +139,9 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-card-foreground line-clamp-3">{idea.description}</p>
+        <p className="text-sm text-card-foreground line-clamp-3">
+          {formatTextWithLinks(idea.description)}
+        </p>
       </CardContent>
       <CardFooter className="flex justify-between items-center mt-auto pt-4">
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -141,66 +183,66 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                 </DialogHeader>
               </div>
 
-              {/* Scrollable Content */}
-              <ScrollArea className="flex-1">
-                <div className="p-4">
-                  <div className="space-y-4">
-                    {/* Description Section */}
-                    <div className="prose prose-sm dark:prose-invert max-w-full">
-                      <div className="relative">
-                        <p className="text-card-foreground leading-relaxed break-words text-sm max-w-full">
-                          {idea.description.length > 200 ? (
-                            <>
-                              <span className={cn(
-                                "block transition-all duration-300 whitespace-pre-wrap break-words",
-                                !isDescriptionExpanded && "line-clamp-4"
-                              )}>
-                                {idea.description}
-                              </span>
-                              <Button
-                                variant="link"
-                                className="px-0 h-auto font-medium text-primary"
-                                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                              >
-                                {isDescriptionExpanded ? "Show less" : "Read more"}
-                              </Button>
-                            </>
-                          ) : (
-                            <span className="whitespace-pre-wrap break-words">
-                              {idea.description}
-                            </span>
+              {/* Update ScrollArea wrapper */}
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    <div className="space-y-4">
+                      {/* Description Section */}
+                      <div className="prose prose-sm dark:prose-invert max-w-full">
+                        <div className="relative">
+                          <p 
+                            className={cn(
+                              "text-card-foreground leading-relaxed break-words",
+                              !isDescriptionExpanded && "line-clamp-4"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {formatTextWithLinks(idea.description)}
+                          </p>
+                          {idea.description.length > 300 && (
+                            <Button
+                              variant="link"
+                              className="px-0 h-auto font-medium text-primary mt-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDescriptionExpanded(!isDescriptionExpanded);
+                              }}
+                            >
+                              {isDescriptionExpanded ? "Show less" : "Read more"}
+                            </Button>
                           )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Metadata and Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <div className="flex flex-col gap-2">
-                        <Badge variant="secondary" className="flex items-center w-fit">
-                          <Flame className="w-4 h-4 mr-1 text-orange-500" />
-                          {idea.upvotes - idea.downvotes} supports
-                        </Badge>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span className="truncate">{idea.author_name}</span>
                         </div>
                       </div>
-                      <VoteButtons 
-                        currentVote={currentVote}
-                        voteCount={voteCount}
-                        onUpvote={() => handleVote("upvote")}
-                        onDownvote={() => handleVote("downvote")}
-                      />
+
+                      {/* Metadata and Actions */}
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <div className="flex flex-col gap-2">
+                          <Badge variant="secondary" className="flex items-center w-fit">
+                            <Flame className="w-4 h-4 mr-1 text-orange-500" />
+                            {idea.upvotes - idea.downvotes} supports
+                          </Badge>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <User className="w-4 h-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{idea.author_name}</span>
+                          </div>
+                        </div>
+                        <VoteButtons 
+                          currentVote={currentVote}
+                          voteCount={voteCount}
+                          onUpvote={() => handleVote("upvote")}
+                          onDownvote={() => handleVote("downvote")}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Comments Section */}
-                <div className="border-t">
-                  <CommentSection ideaId={idea.id} />
-                </div>
-              </ScrollArea>
+                  {/* Comments Section */}
+                  <div className="border-t pb-20">
+                    <CommentSection ideaId={idea.id} />
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
 
             {/* Desktop View */}
@@ -240,7 +282,7 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                                   "block transition-all duration-300 whitespace-pre-wrap break-words",
                                   !isDescriptionExpanded && "line-clamp-6"
                                 )}>
-                                  {idea.description}
+                                  {formatTextWithLinks(idea.description)}
                                 </span>
                                 <Button
                                   variant="link"
@@ -252,7 +294,7 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                               </>
                             ) : (
                               <span className="whitespace-pre-wrap break-words">
-                                {idea.description}
+                                {formatTextWithLinks(idea.description)}
                               </span>
                             )}
                           </p>
@@ -288,7 +330,11 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
 
               {/* Right Panel - Comments */}
               <div className="col-span-2 border-l h-full overflow-hidden">
-                <CommentSection ideaId={idea.id} />
+                <ScrollArea className="h-full">
+                  <div className="pb-20">
+                    <CommentSection ideaId={idea.id} />
+                  </div>
+                </ScrollArea>
               </div>
             </div>
           </DialogContent>

@@ -46,3 +46,11 @@ CREATE POLICY "Users can update their own ideas."
 CREATE POLICY "Users can delete their own ideas."
   ON ideas FOR DELETE
   USING (auth.uid() = user_id);
+
+-- Update author_name column to remove any default value
+ALTER TABLE ideas
+ALTER COLUMN author_name DROP DEFAULT;
+
+-- Add a constraint to ensure author_name is not null
+ALTER TABLE ideas
+ALTER COLUMN author_name SET NOT NULL;

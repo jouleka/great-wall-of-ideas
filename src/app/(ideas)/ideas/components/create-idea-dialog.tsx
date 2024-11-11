@@ -9,7 +9,6 @@ import dynamic from 'next/dynamic'
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { Idea } from "@/lib/types/idea"
-import { useRouter } from 'next/navigation'
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -32,72 +31,85 @@ type FormInputs = {
   is_anonymous: boolean;
 }
 
+function sanitizeText(text: string) {
+  if (!text) return '';
+  
+  // Convert line breaks to spaces and normalize whitespace
+  const normalized = text
+    .replace(/\r\n|\r|\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Only remove potentially harmful HTML/script content but preserve URLs
+  return normalized
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '[removed]') // Replace javascript: protocol
+    .replace(/data:/gi, '[removed]') // Replace data: protocol
+    .replace(/vbscript:/gi, '[removed]') // Replace vbscript: protocol
+    .replace(/on\w+\s*=/gi, '[removed]') // Remove event handlers
+    .replace(/style\s*=/gi, '[removed]'); // Remove style attributes
+}
+
+function formatTags(tags: string): string[] {
+  const tagArray = tags
+    .split(',')
+    .map(tag => sanitizeText(tag).toLowerCase())
+    .filter(tag => tag.length > 0)
+    .filter((tag, index, self) => self.indexOf(tag) === index)
+    .slice(0, 5);
+
+  return tagArray.length > 0 ? tagArray : ['general'];
+}
+
 export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInputs>()
   const { user } = useAuth()
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const onSubmit: SubmitHandler<FormInputs> = useCallback(async (data: FormInputs) => {
-    if (!user || !user.profile) {
-      toast("Hold on!", {
-        description: "You need to be logged in to share your brilliant idea."
-      })
+    if (!user?.profile) {
+      toast.error("Please sign in to share your idea")
       return
     }
 
     setIsSubmitting(true)
     try {
       await createIdea({ 
-        ...data, 
-        user_id: user.id, 
+        title: sanitizeText(data.title),
+        description: sanitizeText(data.description),
+        company: sanitizeText(data.company),
+        category: sanitizeText(data.category),
+        tags: formatTags(data.tags),
+        user_id: user.id,
         author_name: data.is_anonymous ? "Anonymous" : (user.profile.username || "Unknown"),
-        tags: data.tags.split(',').map((tag: string) => tag.trim()),
         status: "pending",
-        is_featured: false
+        is_featured: false,
+        is_anonymous: data.is_anonymous
       })
+
       reset()
-      toast("Idea Launched!", {
+      toast.success("Idea Launched!", {
         description: "Your brilliant idea is now live on the Great Wall!"
       })
     } catch (error) {
       console.error('Error creating idea:', error)
-      toast("Uh-oh!", {
-        description: "We couldn't add your idea right now. Give it another shot!"
-      })
+      if (error instanceof Error) {
+        if (error.message.includes("description_length")) {
+          toast.error("Description must be less than 2000 characters")
+        } else if (error.message.includes("title_length")) {
+          toast.error("Title must be less than 100 characters") 
+        } else if (error.message.includes("category_length")) {
+          toast.error("Category must be less than 30 characters")
+        } else if (error.message.includes("tags_length")) {
+          toast.error("Maximum 5 tags allowed")
+        } else {
+          toast.error(error.message || "Failed to create idea. Please try again.")
+        }
+      }
     } finally {
       setIsSubmitting(false)
     }
   }, [user, createIdea, reset])
-
-  if (!user) {
-    return (
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button className="gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Share Your Idea
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign In Required</DialogTitle>
-            <DialogDescription>
-              Please sign in or create an account to share your ideas with the community.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => router.push('/auth?redirectTo=/ideas')}>
-              Sign In
-            </Button>
-            <Button onClick={() => router.push('/auth?tab=register&redirectTo=/ideas')}>
-              Create Account
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
 
   return (
     <Dialog>
@@ -115,6 +127,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
             Share it with the world - you never know who might build it!
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
           <div>
             <Label htmlFor="title" className="text-lg font-semibold flex items-center">
@@ -122,33 +135,57 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
             </Label>
             <Input
               id="title"
-              {...register("title", { 
+              {...register("title", {
                 required: "Title is required",
-                maxLength: { value: 100, message: "Title must be less than 100 characters" }
+                minLength: {
+                  value: 3,
+                  message: "Title must be at least 3 characters"
+                },
+                maxLength: {
+                  value: 100,
+                  message: "Title must be less than 100 characters"
+                }
               })}
               className="mt-1"
               placeholder="Give it a catchy title"
-              aria-invalid={errors.title ? "true" : "false"}
+              aria-describedby="title-error"
             />
-            {errors.title && <p role="alert" className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
+            {errors.title && (
+              <p id="title-error" className="text-sm text-red-500 mt-1">
+                {errors.title.message}
+              </p>
+            )}
           </div>
+
           <div>
             <Label htmlFor="description" className="text-lg font-semibold flex items-center">
               <Target className="mr-2 h-5 w-5" /> Tell Us More
             </Label>
             <Textarea
               id="description"
-              {...register("description", { 
+              {...register("description", {
                 required: "Description is required",
-                minLength: { value: 20, message: "Description must be at least 20 characters long" }
+                minLength: {
+                  value: 20,
+                  message: "Description must be at least 20 characters"
+                },
+                maxLength: {
+                  value: 2000,
+                  message: "Description must be less than 2000 characters"
+                }
               })}
               className="mt-1"
               placeholder="Paint us a picture - what makes this special?"
               rows={4}
-              aria-invalid={errors.description ? "true" : "false"}
+              aria-describedby="description-error"
             />
-            {errors.description && <p role="alert" className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
+            {errors.description && (
+              <p id="description-error" className="text-sm text-red-500 mt-1">
+                {errors.description.message}
+              </p>
+            )}
           </div>
+
           <div>
             <Label htmlFor="company" className="text-lg font-semibold flex items-center">
               <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
@@ -158,10 +195,15 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
               {...register("company", { required: "Company is required" })}
               className="mt-1"
               placeholder="Which company could make this happen?"
-              aria-invalid={errors.company ? "true" : "false"}
+              aria-describedby="company-error"
             />
-            {errors.company && <p role="alert" className="text-red-500 text-sm mt-1">{errors.company.message}</p>}
+            {errors.company && (
+              <p id="company-error" className="text-sm text-red-500 mt-1">
+                {errors.company.message}
+              </p>
+            )}
           </div>
+
           <div>
             <Label htmlFor="category" className="text-lg font-semibold flex items-center">
               <Tag className="mr-2 h-5 w-5" /> Category
@@ -171,10 +213,15 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
               {...register("category", { required: "Category is required" })}
               className="mt-1"
               placeholder="e.g., Tech, Health, Education"
-              aria-invalid={errors.category ? "true" : "false"}
+              aria-describedby="category-error"
             />
-            {errors.category && <p role="alert" className="text-red-500 text-sm mt-1">{errors.category.message}</p>}
+            {errors.category && (
+              <p id="category-error" className="text-sm text-red-500 mt-1">
+                {errors.category.message}
+              </p>
+            )}
           </div>
+
           <div>
             <Label htmlFor="tags" className="text-lg font-semibold flex items-center">
               <Tag className="mr-2 h-5 w-5" /> Tags
@@ -184,8 +231,15 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
               {...register("tags")}
               className="mt-1"
               placeholder="Enter tags separated by commas"
+              aria-describedby="tags-error"
             />
+            {errors.tags && (
+              <p id="tags-error" className="text-sm text-red-500 mt-1">
+                {errors.tags.message}
+              </p>
+            )}
           </div>
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -197,16 +251,21 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
               <Eye className="mr-2 h-5 w-5" /> Post Anonymously
             </Label>
           </div>
+
           <Button 
             type="submit" 
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 px-6 rounded-lg shadow-md"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              "One moment..."
+              <>
+                <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                Creating...
+              </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-5 w-5" /> Add to the Great Wall
+                <Sparkles className="mr-2 h-5 w-5" />
+                Add to the Great Wall
               </>
             )}
           </Button>

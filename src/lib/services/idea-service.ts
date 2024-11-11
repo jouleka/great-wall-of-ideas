@@ -1,35 +1,66 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { toast } from 'sonner'
 import { Idea } from '@/lib/types/idea'
+import { Database } from '@/lib/types/database'
 
 const PAGE_SIZE = 12
 
 interface IdeaData {
   title: string
   description: string
-  tags?: string[]
-  is_anonymous?: boolean
+  company: string
+  category: string
+  tags: string[]
+  is_anonymous: boolean
   user_id: string
   author_name: string
+  status: 'pending' | 'approved' | 'rejected'
+  is_featured: boolean
 }
 
 export const ideaService = {
   async createIdea(data: IdeaData) {
-    const supabase = createClientComponentClient()
+    const supabase = createClientComponentClient<Database>()
     
     try {
+      // Basic validation before sending to DB
+      if (!data.title?.trim()) {
+        throw new Error("Title is required")
+      }
+      if (data.description?.length < 20) {
+        throw new Error("Description must be at least 20 characters")
+      }
+      if (!data.category?.trim()) {
+        throw new Error("Category is required") 
+      }
+      if (!data.company?.trim()) {
+        throw new Error("Company is required")
+      }
+      if (!Array.isArray(data.tags) || data.tags.length === 0) {
+        throw new Error("At least one tag is required")
+      }
+
       const { error } = await supabase
         .from('ideas')
-        .insert([data])
+        .insert([{
+          ...data,
+          title: data.title.trim(),
+          description: data.description.trim(),
+          category: data.category.trim(),
+          company: data.company.trim(),
+          tags: data.tags.map(tag => tag.trim().toLowerCase())
+        }])
 
-      if (error) throw error
+      if (error) {
+        // Map DB constraint errors to user-friendly messages
+        if (error.message?.includes('description_length')) {
+          throw new Error('Description must be less than 2000 characters')
+        }
+        throw error
+      }
 
-      toast.success("Idea created successfully!")
       return { success: true }
     } catch (err) {
-      console.error('Error creating idea:', err)
-      toast.error("Failed to create idea")
-      return { success: false, error: err }
+      throw err
     }
   },
 

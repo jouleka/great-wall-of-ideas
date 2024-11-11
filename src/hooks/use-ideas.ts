@@ -166,10 +166,17 @@ export function useIdeas() {
         return
       }
 
+      // Get the profile data
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single()
+
       await ideaService.createIdea({
         ...newIdea,
         user_id: user.id,
-        author_name: newIdea.is_anonymous ? 'Anonymous' : user.user_metadata?.username || 'Unknown'
+        author_name: newIdea.is_anonymous ? 'Anonymous' : (profile?.username || 'Unknown')
       })
 
       resetIdeas()

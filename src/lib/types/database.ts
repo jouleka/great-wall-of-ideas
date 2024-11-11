@@ -13,7 +13,7 @@ export interface DatabaseUser {
 export interface DatabaseProfile {
   id: string;
   updated_at: string | null;
-  username: string | null;
+  username: string;
   full_name: string | null;
   avatar_url: string | null;
   website: string | null;
@@ -35,6 +35,8 @@ export interface DatabaseIdea {
   tags: string[];
   status: 'pending' | 'approved' | 'rejected';
   is_featured: boolean;
+  company: string;
+  category: string;
 }
 
 export interface DatabaseComment {
