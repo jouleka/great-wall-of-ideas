@@ -1,11 +1,10 @@
 "use client"
 
 import React, { memo, useState, useEffect } from "react"
-import { ChevronUp, ChevronDown, Award, Flame, User, X } from "lucide-react"
+import { Award, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { Idea } from "@/lib/types/idea"
 import { useIdeaIcon, useIdeaBadge } from "@/lib/utils/idea-utils"
@@ -16,10 +15,13 @@ import { voteService } from "@/lib/services/vote-service"
 import { useRouter } from "next/navigation"
 import { CommentSection } from "./comments/comment-section"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { VoteIndicator } from "./vote-indicator"
+import { VoteButtons } from "./vote-buttons"
 
 interface IdeaCardProps {
   idea: Idea
   onVote: (ideaId: string, voteType: "upvote" | "downvote") => Promise<void>
+  size?: 'default' | 'lg'
 }
 
 // URL formatting function
@@ -62,23 +64,21 @@ function formatTextWithLinks(text: string) {
   });
 }
 
-const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
+const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCardProps) => {
   const { user } = useAuth()
   const router = useRouter()
   const [currentVote, setCurrentVote] = useState<'upvote' | 'downvote' | null>(null)
-  const [voteCount, setVoteCount] = useState(idea.upvotes - idea.downvotes)
+  const [idea, setIdea] = useState(initialIdea)
   const IconComponent = useIdeaIcon(idea.category)
   const ideaBadge = useIdeaBadge(idea.status)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
-    // Update vote count when idea props change
-    setVoteCount(idea.upvotes - idea.downvotes)
-  }, [idea.upvotes, idea.downvotes])
+    setIdea(initialIdea)
+  }, [initialIdea])
 
   useEffect(() => {
-    // Get user's current vote when component mounts
     async function getCurrentVote() {
       if (!user) return
       const vote = await voteService.getCurrentVote(idea.id, user.id)
@@ -99,22 +99,40 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
     }
 
     try {
-      // Optimistically update UI
-      const newVote = currentVote === voteType ? null : voteType
+      const isRemovingVote = currentVote === voteType
+      const isChangingVote = currentVote && currentVote !== voteType
+
+      let newUpvotes = idea.upvotes
+      let newDownvotes = idea.downvotes
+
+      if (voteType === 'upvote') {
+        if (isRemovingVote) {
+          newUpvotes--
+        } else {
+          newUpvotes++
+          if (isChangingVote) newDownvotes--
+        }
+      } else {
+        if (isRemovingVote) {
+          newDownvotes--
+        } else {
+          newDownvotes++
+          if (isChangingVote) newUpvotes--
+        }
+      }
+
+      const newVote = isRemovingVote ? null : voteType
       setCurrentVote(newVote)
+      setIdea(prev => ({
+        ...prev,
+        upvotes: newUpvotes,
+        downvotes: newDownvotes
+      }))
       
-      // Calculate and update vote count
-      const voteChange = currentVote === voteType ? -1 : 
-                        currentVote === null ? 1 : 
-                        2 // switching from opposite vote
-      setVoteCount(prev => prev + (voteType === 'upvote' ? voteChange : -voteChange))
-      
-      // Make API call
       await onVote(idea.id, voteType)
     } catch (error) {
-      // Revert optimistic updates on error
       setCurrentVote(currentVote)
-      setVoteCount(idea.upvotes - idea.downvotes)
+      setIdea(initialIdea)
       console.error('Error voting:', error)
     }
   }
@@ -216,22 +234,27 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                       </div>
 
                       {/* Metadata and Actions */}
-                      <div className="flex items-center justify-between pt-4 border-t">
-                        <div className="flex flex-col gap-2">
-                          <Badge variant="secondary" className="flex items-center w-fit">
-                            <Flame className="w-4 h-4 mr-1 text-orange-500" />
-                            {idea.upvotes - idea.downvotes} supports
-                          </Badge>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <User className="w-4 h-4 mr-1 flex-shrink-0" />
-                            <span className="truncate">{idea.author_name}</span>
-                          </div>
+                      <div className="flex flex-col gap-3">
+                        <VoteIndicator 
+                          upvotes={idea.upvotes}
+                          downvotes={idea.downvotes}
+                          size={size === 'lg' ? 'lg' : 'default'}
+                          showTrend={true}
+                          className="w-full max-w-[200px]"
+                        />
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <User className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{idea.author_name}</span>
                         </div>
+                      </div>
+                      <div className="flex items-center">
                         <VoteButtons 
                           currentVote={currentVote}
-                          voteCount={voteCount}
+                          upvotes={idea.upvotes}
+                          downvotes={idea.downvotes}
                           onUpvote={() => handleVote("upvote")}
                           onDownvote={() => handleVote("downvote")}
+                          size={size === 'lg' ? 'lg' : 'default'}
                         />
                       </div>
                     </div>
@@ -304,10 +327,13 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                       {/* Metadata and Actions */}
                       <div className="flex items-center justify-between py-4 border-t space-y-4">
                         <div className="flex flex-col gap-3">
-                          <Badge variant="secondary" className="flex items-center w-fit text-base">
-                            <Flame className="w-5 h-5 mr-2 text-orange-500" />
-                            {idea.upvotes - idea.downvotes} supports
-                          </Badge>
+                          <VoteIndicator 
+                            upvotes={idea.upvotes}
+                            downvotes={idea.downvotes}
+                            size={size === 'lg' ? 'lg' : 'default'}
+                            showTrend={true}
+                            className="w-full max-w-[200px]"
+                          />
                           <div className="flex items-center text-sm text-muted-foreground">
                             <User className="w-4 h-4 mr-2 flex-shrink-0" />
                             <span className="truncate">{idea.author_name}</span>
@@ -316,10 +342,11 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
                         <div className="flex items-center">
                           <VoteButtons 
                             currentVote={currentVote}
-                            voteCount={voteCount}
+                            upvotes={idea.upvotes}
+                            downvotes={idea.downvotes}
                             onUpvote={() => handleVote("upvote")}
                             onDownvote={() => handleVote("downvote")}
-                            size="lg"
+                            size={size === 'lg' ? 'lg' : 'default'}
                           />
                         </div>
                       </div>
@@ -343,86 +370,17 @@ const IdeaCard = memo(({ idea, onVote }: IdeaCardProps) => {
         <div className="flex items-center space-x-2">
           <VoteButtons 
             currentVote={currentVote}
-            voteCount={voteCount}
+            upvotes={idea.upvotes}
+            downvotes={idea.downvotes}
             onUpvote={() => handleVote("upvote")}
             onDownvote={() => handleVote("downvote")}
+            size={size === 'lg' ? 'lg' : 'default'}
           />
         </div>
       </CardFooter>
     </Card>
   )
 })
-
-// Extract VoteButtons to a reusable component
-interface VoteButtonsProps {
-  currentVote: 'upvote' | 'downvote' | null
-  voteCount: number
-  onUpvote: () => void
-  onDownvote: () => void
-  size?: 'default' | 'lg'
-}
-
-function VoteButtons({ currentVote, voteCount, onUpvote, onDownvote, size = 'default' }: VoteButtonsProps) {
-  const iconSize = size === 'lg' ? "h-5 w-5" : "h-4 w-4"
-  const buttonSize = size === 'lg' ? "h-10 w-10" : "h-8 w-8"
-  const textSize = size === 'lg' ? "text-lg" : "text-base"
-
-  return (
-    <div className="flex items-center space-x-3">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onUpvote}
-              className={cn(
-                buttonSize,
-                currentVote === 'upvote' && "bg-green-100"
-              )}
-            >
-              <ChevronUp className={cn(
-                iconSize,
-                currentVote === 'upvote' ? "text-green-600" : "text-green-500"
-              )} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Support this idea</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <span className={cn("font-semibold text-card-foreground", textSize)}>
-        {voteCount}
-      </span>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onDownvote}
-              className={cn(
-                buttonSize,
-                currentVote === 'downvote' && "bg-red-100"
-              )}
-            >
-              <ChevronDown className={cn(
-                iconSize,
-                currentVote === 'downvote' ? "text-red-600" : "text-red-500"
-              )} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Withdraw support</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  )
-}
 
 IdeaCard.displayName = 'IdeaCard'
 
