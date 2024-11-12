@@ -12,7 +12,6 @@ import { useIdeas } from "@/hooks/use-ideas"
 import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
 import { UserProfile } from "@/components/layout/user-profile"
-import { sessionUtils } from "@/lib/utils/session-utils"
 import { Loading } from "@/components/ui/loading"
 
 // Dynamically import heavy components
@@ -26,7 +25,7 @@ const CreateIdeaDialog = dynamic(() => import("./components/create-idea-dialog")
 })
 
 export default function GreatWallOfIdeas() {
-  const { isLoading, ideas, handleVote, createIdea, loadMore, hasMore, resetIdeas } = useIdeas()
+  const { isLoading, isLoadingMore, ideas, handleVote, createIdea, loadMore, hasMore, resetIdeas } = useIdeas()
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -44,13 +43,13 @@ export default function GreatWallOfIdeas() {
   }, [ideas, debouncedSearchTerm])
 
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    if (!hasMore) return
+    if (!hasMore || isLoadingMore) return
     
     const { scrollTop, clientHeight, scrollHeight } = event.currentTarget
     if (scrollHeight - scrollTop <= clientHeight * 1.5) {
       loadMore()
     }
-  }, [hasMore, loadMore])
+  }, [hasMore, isLoadingMore, loadMore])
 
   useEffect(() => {
     resetIdeas()
@@ -60,32 +59,6 @@ export default function GreatWallOfIdeas() {
   const handleCreateIdea = useCallback(async (newIdea: Omit<Idea, "id" | "created_at" | "updated_at" | "upvotes" | "downvotes" | "views">) => {
     await createIdea(newIdea)
   }, [createIdea])
-
-  useEffect(() => {
-    sessionUtils.startSessionRefresh()
-    
-    return () => {
-      sessionUtils.stopSessionRefresh()
-    }
-  }, [])
-
-  useEffect(() => {
-    const handleActivity = () => {
-      sessionUtils.updateLastActivity()
-    }
-
-    window.addEventListener('mousemove', handleActivity)
-    window.addEventListener('keydown', handleActivity)
-    window.addEventListener('click', handleActivity)
-    window.addEventListener('scroll', handleActivity)
-
-    return () => {
-      window.removeEventListener('mousemove', handleActivity)
-      window.removeEventListener('keydown', handleActivity)
-      window.removeEventListener('click', handleActivity)
-      window.removeEventListener('scroll', handleActivity)
-    }
-  }, [])
 
   if (isLoading) {
     return (
@@ -164,7 +137,7 @@ export default function GreatWallOfIdeas() {
                 <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
               ))}
             </div>
-            {hasMore && (
+            {isLoadingMore && hasMore && (
               <div className="text-center mt-4 py-4">
                 <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary mx-auto" />
               </div>

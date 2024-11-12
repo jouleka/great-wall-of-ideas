@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Idea } from "@/lib/types/idea"
+import { useState, useCallback, useRef } from "react"
+import { Idea } from "../lib/types/idea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { toast } from "sonner"
-import { ideaService } from '@/lib/services/idea-service'
-import { voteService } from '@/lib/services/vote-service'
+import { ideaService } from '../lib/services/idea-service'
+import { voteService } from '../lib/services/vote-service'
 
 export function useIdeas() {
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const pageRef = useRef(0)
   const isFetchingRef = useRef(false)
@@ -18,10 +19,16 @@ export function useIdeas() {
     
     try {
       isFetchingRef.current = true
+      
+      if (page === 0) {
+        setIsLoading(true)
+      } else {
+        setIsLoadingMore(true)
+      }
+      
       const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page)
       
       setIdeas(prev => {
-        // Deduplicate ideas based on id
         const newIdeas = page === 0 ? data : [...prev, ...data]
         const uniqueIdeas = Array.from(
           new Map(newIdeas.map(item => [item.id, item])).values()
@@ -36,6 +43,7 @@ export function useIdeas() {
       toast.error("Failed to load ideas")
     } finally {
       setIsLoading(false)
+      setIsLoadingMore(false)
       isFetchingRef.current = false
     }
   }, [])
@@ -44,22 +52,10 @@ export function useIdeas() {
     setIdeas([])
     setHasMore(true)
     setIsLoading(true)
+    setIsLoadingMore(false)
     pageRef.current = 0
     isFetchingRef.current = false
     loadIdeas(0)
-  }, [loadIdeas])
-
-  const loadMore = useCallback(() => {
-    if (!hasMore || isFetchingRef.current) return
-    loadIdeas(pageRef.current + 1)
-  }, [hasMore, loadIdeas])
-
-  useEffect(() => {
-    loadIdeas(0)
-    return () => {
-      setIdeas([])
-      pageRef.current = 0
-    }
   }, [loadIdeas])
 
   const handleVote = useCallback(async (ideaId: string, voteType: 'upvote' | 'downvote') => {
@@ -70,30 +66,23 @@ export function useIdeas() {
         return
       }
 
-      // Find the idea being voted on
       const idea = ideas.find(i => i.id === ideaId)
       if (!idea) return
 
-      // Store current state for rollback
       const previousState = [...ideas]
 
-      // Get current vote before updating
       const currentVote = await voteService.getCurrentVote(ideaId, user.id)
 
-      // Calculate new vote counts based on action
       let newUpvotes = idea.upvotes
       let newDownvotes = idea.downvotes
 
       if (!currentVote) {
-        // Adding new vote
         if (voteType === 'upvote') newUpvotes++
         else newDownvotes++
       } else if (currentVote === voteType) {
-        // Removing vote
         if (voteType === 'upvote') newUpvotes--
         else newDownvotes--
       } else {
-        // Switching vote
         if (voteType === 'upvote') {
           newUpvotes++
           newDownvotes--
@@ -103,7 +92,6 @@ export function useIdeas() {
         }
       }
 
-      // Optimistic update
       setIdeas(prev => 
         prev.map(i => {
           if (i.id !== ideaId) return i
@@ -115,17 +103,14 @@ export function useIdeas() {
         })
       )
 
-      // Make the actual API call
       const result = await voteService.handleVote(ideaId, user.id, voteType)
 
       if (!result.success) {
-        // Revert on failure
         setIdeas(previousState)
         toast.error(result.message)
         return
       }
 
-      // Update with actual server counts
       setIdeas(prev =>
         prev.map(idea =>
           idea.id === ideaId
@@ -138,7 +123,6 @@ export function useIdeas() {
         )
       )
 
-      // Show a single success message based on action
       switch (result.action) {
         case 'added':
           toast.success(`Vote recorded`)
@@ -154,7 +138,7 @@ export function useIdeas() {
     } catch (error) {
       console.error('Error voting:', error)
       toast.error("Failed to register vote")
-      loadIdeas(pageRef.current) // Reload to ensure consistency
+      loadIdeas(pageRef.current)
     }
   }, [supabase, ideas, loadIdeas])
 
@@ -166,7 +150,6 @@ export function useIdeas() {
         return
       }
 
-      // Get the profile data
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -189,10 +172,11 @@ export function useIdeas() {
   return {
     ideas,
     isLoading,
+    isLoadingMore,
     hasMore,
     handleVote,
     createIdea,
-    loadMore,
+    loadMore: () => loadIdeas(pageRef.current + 1),
     resetIdeas
   }
 }

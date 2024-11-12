@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic'
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { Idea } from "@/lib/types/idea"
+import { useRouter } from 'next/navigation'
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -30,6 +31,8 @@ type FormInputs = {
   tags: string;
   is_anonymous: boolean;
 }
+
+const STORAGE_KEY = 'idea-form-draft'
 
 function sanitizeText(text: string) {
   if (!text) return '';
@@ -62,9 +65,35 @@ function formatTags(tags: string): string[] {
 }
 
 export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInputs>()
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormInputs>()
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
+
+  // Load saved form data on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY)
+    if (savedData) {
+      try {
+        const formData = JSON.parse(savedData) as FormInputs
+        Object.entries(formData).forEach(([key, value]) => {
+          setValue(key as keyof FormInputs, value as string | boolean)
+        })
+      } catch (error) {
+        console.error('Error loading saved form data:', error)
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
+  }, [setValue])
+
+  // Save form data on changes
+  const formValues = watch()
+  useEffect(() => {
+    if (Object.values(formValues).some(value => value)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formValues))
+    }
+  }, [formValues])
 
   const onSubmit: SubmitHandler<FormInputs> = useCallback(async (data: FormInputs) => {
     if (!user?.profile) {
@@ -87,7 +116,11 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
         is_anonymous: data.is_anonymous
       })
 
+      // Clear form and local storage after successful submission
       reset()
+      localStorage.removeItem(STORAGE_KEY)
+      setIsOpen(false)
+      
       toast.success("Idea Launched!", {
         description: "Your brilliant idea is now live on the Great Wall!"
       })
@@ -112,164 +145,205 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   }, [user, createIdea, reset])
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 px-6 rounded-lg shadow-md">
           <Rocket className="mr-2 h-5 w-5" /> Share Your Idea
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">
-            Got a Bright Idea?
-          </DialogTitle>
-          <DialogDescription>
-            Share it with the world - you never know who might build it!
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-          <div>
-            <Label htmlFor="title" className="text-lg font-semibold flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5" /> What&apos;s Your Idea?
-            </Label>
-            <Input
-              id="title"
-              {...register("title", {
-                required: "Title is required",
-                minLength: {
-                  value: 3,
-                  message: "Title must be at least 3 characters"
-                },
-                maxLength: {
-                  value: 100,
-                  message: "Title must be less than 100 characters"
-                }
-              })}
-              className="mt-1"
-              placeholder="Give it a catchy title"
-              aria-describedby="title-error"
-            />
-            {errors.title && (
-              <p id="title-error" className="text-sm text-red-500 mt-1">
-                {errors.title.message}
-              </p>
-            )}
+        {!user ? (
+          // Guest user view
+          <div className="space-y-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">
+                Sign in to Share Ideas
+              </DialogTitle>
+              <DialogDescription>
+                Join our community to share your brilliant ideas and engage with others!
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <Button 
+                onClick={() => {
+                  setIsOpen(false)
+                  router.push('/auth?redirectTo=/ideas')
+                }}
+                className="w-full"
+              >
+                Sign In
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-normal"
+                  onClick={() => {
+                    setIsOpen(false)
+                    router.push('/auth?mode=signup&redirectTo=/ideas')
+                  }}
+                >
+                  Sign up
+                </Button>
+              </div>
+            </div>
           </div>
+        ) : (
+          // Authenticated user view - existing form
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">
+                Got a Bright Idea?
+              </DialogTitle>
+              <DialogDescription>
+                Share it with the world - you never know who might build it!
+              </DialogDescription>
+            </DialogHeader>
 
-          <div>
-            <Label htmlFor="description" className="text-lg font-semibold flex items-center">
-              <Target className="mr-2 h-5 w-5" /> Tell Us More
-            </Label>
-            <Textarea
-              id="description"
-              {...register("description", {
-                required: "Description is required",
-                minLength: {
-                  value: 20,
-                  message: "Description must be at least 20 characters"
-                },
-                maxLength: {
-                  value: 2000,
-                  message: "Description must be less than 2000 characters"
-                }
-              })}
-              className="mt-1"
-              placeholder="Paint us a picture - what makes this special?"
-              rows={4}
-              aria-describedby="description-error"
-            />
-            {errors.description && (
-              <p id="description-error" className="text-sm text-red-500 mt-1">
-                {errors.description.message}
-              </p>
-            )}
-          </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
+              <div>
+                <Label htmlFor="title" className="text-lg font-semibold flex items-center">
+                  <Lightbulb className="mr-2 h-5 w-5" /> What&apos;s Your Idea?
+                </Label>
+                <Input
+                  id="title"
+                  {...register("title", {
+                    required: "Title is required",
+                    minLength: {
+                      value: 3,
+                      message: "Title must be at least 3 characters"
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: "Title must be less than 100 characters"
+                    }
+                  })}
+                  className="mt-1"
+                  placeholder="Give it a catchy title"
+                  aria-describedby="title-error"
+                />
+                {errors.title && (
+                  <p id="title-error" className="text-sm text-red-500 mt-1">
+                    {errors.title.message}
+                  </p>
+                )}
+              </div>
 
-          <div>
-            <Label htmlFor="company" className="text-lg font-semibold flex items-center">
-              <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
-            </Label>
-            <Input
-              id="company"
-              {...register("company", { required: "Company is required" })}
-              className="mt-1"
-              placeholder="Which company could make this happen?"
-              aria-describedby="company-error"
-            />
-            {errors.company && (
-              <p id="company-error" className="text-sm text-red-500 mt-1">
-                {errors.company.message}
-              </p>
-            )}
-          </div>
+              <div>
+                <Label htmlFor="description" className="text-lg font-semibold flex items-center">
+                  <Target className="mr-2 h-5 w-5" /> Tell Us More
+                </Label>
+                <Textarea
+                  id="description"
+                  {...register("description", {
+                    required: "Description is required",
+                    minLength: {
+                      value: 20,
+                      message: "Description must be at least 20 characters"
+                    },
+                    maxLength: {
+                      value: 2000,
+                      message: "Description must be less than 2000 characters"
+                    }
+                  })}
+                  className="mt-1"
+                  placeholder="Paint us a picture - what makes this special?"
+                  rows={4}
+                  aria-describedby="description-error"
+                />
+                {errors.description && (
+                  <p id="description-error" className="text-sm text-red-500 mt-1">
+                    {errors.description.message}
+                  </p>
+                )}
+              </div>
 
-          <div>
-            <Label htmlFor="category" className="text-lg font-semibold flex items-center">
-              <Tag className="mr-2 h-5 w-5" /> Category
-            </Label>
-            <Input
-              id="category"
-              {...register("category", { required: "Category is required" })}
-              className="mt-1"
-              placeholder="e.g., Tech, Health, Education"
-              aria-describedby="category-error"
-            />
-            {errors.category && (
-              <p id="category-error" className="text-sm text-red-500 mt-1">
-                {errors.category.message}
-              </p>
-            )}
-          </div>
+              <div>
+                <Label htmlFor="company" className="text-lg font-semibold flex items-center">
+                  <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
+                </Label>
+                <Input
+                  id="company"
+                  {...register("company", { required: "Company is required" })}
+                  className="mt-1"
+                  placeholder="Which company could make this happen?"
+                  aria-describedby="company-error"
+                />
+                {errors.company && (
+                  <p id="company-error" className="text-sm text-red-500 mt-1">
+                    {errors.company.message}
+                  </p>
+                )}
+              </div>
 
-          <div>
-            <Label htmlFor="tags" className="text-lg font-semibold flex items-center">
-              <Tag className="mr-2 h-5 w-5" /> Tags
-            </Label>
-            <Input
-              id="tags"
-              {...register("tags")}
-              className="mt-1"
-              placeholder="Enter tags separated by commas"
-              aria-describedby="tags-error"
-            />
-            {errors.tags && (
-              <p id="tags-error" className="text-sm text-red-500 mt-1">
-                {errors.tags.message}
-              </p>
-            )}
-          </div>
+              <div>
+                <Label htmlFor="category" className="text-lg font-semibold flex items-center">
+                  <Tag className="mr-2 h-5 w-5" /> Category
+                </Label>
+                <Input
+                  id="category"
+                  {...register("category", { required: "Category is required" })}
+                  className="mt-1"
+                  placeholder="e.g., Tech, Health, Education"
+                  aria-describedby="category-error"
+                />
+                {errors.category && (
+                  <p id="category-error" className="text-sm text-red-500 mt-1">
+                    {errors.category.message}
+                  </p>
+                )}
+              </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="is_anonymous"
-              {...register("is_anonymous")}
-              className="mr-2"
-            />
-            <Label htmlFor="is_anonymous" className="text-lg font-semibold flex items-center">
-              <Eye className="mr-2 h-5 w-5" /> Post Anonymously
-            </Label>
-          </div>
+              <div>
+                <Label htmlFor="tags" className="text-lg font-semibold flex items-center">
+                  <Tag className="mr-2 h-5 w-5" /> Tags
+                </Label>
+                <Input
+                  id="tags"
+                  {...register("tags")}
+                  className="mt-1"
+                  placeholder="Enter tags separated by commas"
+                  aria-describedby="tags-error"
+                />
+                {errors.tags && (
+                  <p id="tags-error" className="text-sm text-red-500 mt-1">
+                    {errors.tags.message}
+                  </p>
+                )}
+              </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 px-6 rounded-lg shadow-md"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-5 w-5" />
-                Add to the Great Wall
-              </>
-            )}
-          </Button>
-        </form>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_anonymous"
+                  {...register("is_anonymous")}
+                  className="mr-2"
+                />
+                <Label htmlFor="is_anonymous" className="text-lg font-semibold flex items-center">
+                  <Eye className="mr-2 h-5 w-5" /> Post Anonymously
+                </Label>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 px-6 rounded-lg shadow-md"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Add to the Great Wall
+                  </>
+                )}
+              </Button>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

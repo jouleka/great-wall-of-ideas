@@ -1,6 +1,6 @@
 "use client"
 
-import React, { memo, useState, useEffect } from "react"
+import React, { memo, useState, useEffect, useCallback } from "react"
 import { Award, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +17,8 @@ import { CommentSection } from "./comments/comment-section"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { VoteIndicator } from "./vote-indicator"
 import { VoteButtons } from "./vote-buttons"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/lib/types/database"
 
 interface IdeaCardProps {
   idea: Idea
@@ -74,6 +76,31 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const supabase = createClientComponentClient<Database>()
+
+  const handleExploreClick = useCallback(async () => {
+    try {
+      const { error } = await supabase.rpc('increment_idea_views', {
+        idea_id_input: idea.id
+      })
+
+      if (error) {
+        console.error('Error incrementing views:', error)
+        return
+      }
+
+      // Update local state with new view count
+      setIdea(prev => ({
+        ...prev,
+        views: (prev.views || 0) + 1
+      }))
+
+    } catch (error) {
+      console.error('Error in handleExploreClick:', error)
+    }
+  }, [idea.id, supabase])
+
+  // Reset idea state when initialIdea changes
   useEffect(() => {
     setIdea(initialIdea)
   }, [initialIdea])
@@ -162,12 +189,13 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
         </p>
       </CardContent>
       <CardFooter className="flex justify-between items-center mt-auto pt-4">
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open)
-          setIsDescriptionExpanded(false)
-        }}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleExploreClick}
+            >
               Explore Idea
             </Button>
           </DialogTrigger>

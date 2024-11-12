@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
 import { Toaster } from "sonner";
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -20,17 +22,20 @@ export const metadata: Metadata = {
   description: "A platform for sharing and exploring innovative ideas",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Initialize the Supabase client
+  createServerComponentClient({ cookies })
+  
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <AuthProvider>{children}</AuthProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
