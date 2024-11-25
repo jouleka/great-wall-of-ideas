@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Idea } from "../lib/types/idea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ export function useIdeas() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [sortType, setSortType] = useState<'all' | 'trending' | 'new' | 'top'>('all')
   const pageRef = useRef(0)
   const isFetchingRef = useRef(false)
   const supabase = createClientComponentClient()
@@ -26,7 +27,7 @@ export function useIdeas() {
         setIsLoadingMore(true)
       }
       
-      const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page)
+      const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page, sortType)
       
       setIdeas(prev => {
         const newIdeas = page === 0 ? data : [...prev, ...data]
@@ -46,7 +47,11 @@ export function useIdeas() {
       setIsLoadingMore(false)
       isFetchingRef.current = false
     }
-  }, [])
+  }, [sortType])
+
+  useEffect(() => {
+    resetIdeas()
+  }, [sortType])
 
   const resetIdeas = useCallback(() => {
     setIdeas([])
@@ -177,6 +182,8 @@ export function useIdeas() {
     handleVote,
     createIdea,
     loadMore: () => loadIdeas(pageRef.current + 1),
-    resetIdeas
+    resetIdeas,
+    sortType,
+    setSortType
   }
 }

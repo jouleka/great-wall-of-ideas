@@ -12,7 +12,6 @@ import { useIdeas } from "@/hooks/use-ideas"
 import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
 import { UserProfile } from "@/components/layout/user-profile"
-import { Loading } from "@/components/ui/loading"
 
 // Dynamically import heavy components
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { 
@@ -24,8 +23,36 @@ const CreateIdeaDialog = dynamic(() => import("./components/create-idea-dialog")
   ssr: false 
 })
 
+function IdeaSkeleton() {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <div className="h-6 w-3/4 bg-muted rounded animate-pulse" />
+      <div className="space-y-2">
+        <div className="h-4 w-full bg-muted rounded animate-pulse" />
+        <div className="h-4 w-5/6 bg-muted rounded animate-pulse" />
+        <div className="h-4 w-4/6 bg-muted rounded animate-pulse" />
+      </div>
+      <div className="flex justify-between items-center pt-2">
+        <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-24 bg-muted rounded animate-pulse" />
+      </div>
+    </div>
+  )
+}
+
 export default function GreatWallOfIdeas() {
-  const { isLoading, isLoadingMore, ideas, handleVote, createIdea, loadMore, hasMore, resetIdeas } = useIdeas()
+  const { 
+    isLoading, 
+    isLoadingMore, 
+    ideas, 
+    handleVote, 
+    createIdea, 
+    loadMore, 
+    hasMore, 
+    resetIdeas,
+    sortType,
+    setSortType 
+  } = useIdeas()
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -59,14 +86,6 @@ export default function GreatWallOfIdeas() {
   const handleCreateIdea = useCallback(async (newIdea: Omit<Idea, "id" | "created_at" | "updated_at" | "upvotes" | "downvotes" | "views">) => {
     await createIdea(newIdea)
   }, [createIdea])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <Loading text="Loading brilliant ideas..." />
-      </div>
-    )
-  }
 
   return (
     <motion.div 
@@ -105,7 +124,12 @@ export default function GreatWallOfIdeas() {
           </div>
         </div>
         
-        <Tabs defaultValue="all" className="mb-8">
+        <Tabs 
+          defaultValue="all" 
+          className="mb-8"
+          value={sortType}
+          onValueChange={(value) => setSortType(value as typeof sortType)}
+        >
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
             <TabsTrigger value="all">All Ideas</TabsTrigger>
             <TabsTrigger value="trending">Trending</TabsTrigger>
@@ -116,7 +140,7 @@ export default function GreatWallOfIdeas() {
             <p className="text-sm text-muted-foreground">Discover all groundbreaking ideas from the Great Wall.</p>
           </TabsContent>
           <TabsContent value="trending">
-            <p className="text-sm text-muted-foreground">Ideas gaining momentum and capturing attention right now.</p>
+            <p className="text-sm text-muted-foreground">Ideas gaining momentum and capturing attention in the last 7 days.</p>
           </TabsContent>
           <TabsContent value="new">
             <p className="text-sm text-muted-foreground">Fresh, innovative ideas recently added to the Wall.</p>
@@ -133,13 +157,22 @@ export default function GreatWallOfIdeas() {
         >
           <div className="relative w-full p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredIdeas.map((idea) => (
-                <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
-              ))}
+              {isLoading ? (
+                // Show 12 skeleton cards while loading
+                Array.from({ length: 12 }).map((_, i) => (
+                  <IdeaSkeleton key={i} />
+                ))
+              ) : (
+                filteredIdeas.map((idea) => (
+                  <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
+                ))
+              )}
             </div>
             {isLoadingMore && hasMore && (
-              <div className="text-center mt-4 py-4">
-                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary mx-auto" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <IdeaSkeleton key={`more-${i}`} />
+                ))}
               </div>
             )}
           </div>

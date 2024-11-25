@@ -17,6 +17,8 @@ interface IdeaData {
   is_featured: boolean
 }
 
+type SortType = 'all' | 'trending' | 'new' | 'top'
+
 export const ideaService = {
   async createIdea(data: IdeaData) {
     const supabase = createClientComponentClient<Database>()
@@ -64,24 +66,64 @@ export const ideaService = {
     }
   },
 
-  async getIdeas(page: number) {
-    const supabase = createClientComponentClient()
+  async getIdeas(page: number, sortType: SortType = 'all') {
+    const supabase = createClientComponentClient<Database>()
     
     try {
       const from = page * PAGE_SIZE
-      const to = from + PAGE_SIZE - 1
-
-      const { data, error, count } = await supabase
-        .from('ideas')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, to)
-
-      if (error) throw error
-
-      return {
-        data: data as Idea[],
-        hasMore: count ? from + PAGE_SIZE < count : false
+      
+      switch (sortType) {
+        case 'trending':
+          const { data: trendingData, error: trendingError } = await supabase
+            .rpc('get_trending_ideas', { 
+              p_limit: PAGE_SIZE,
+              p_offset: from
+            })
+          
+          if (trendingError) throw trendingError
+          return {
+            data: trendingData as Idea[],
+            hasMore: trendingData?.length === PAGE_SIZE
+          }
+        
+        case 'top':
+          const { data: topData, error: topError } = await supabase
+            .rpc('get_top_rated_ideas', {
+              p_limit: PAGE_SIZE,
+              p_offset: from
+            })
+          
+          if (topError) throw topError
+          return {
+            data: topData as Idea[],
+            hasMore: topData?.length === PAGE_SIZE
+          }
+        
+        case 'new':
+          const { data: newData, error: newError, count: newCount } = await supabase
+            .from('ideas')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1)
+          
+          if (newError) throw newError
+          return {
+            data: newData as Idea[],
+            hasMore: newCount ? from + PAGE_SIZE < newCount : false
+          }
+        
+        default: // 'all'
+          const { data, error, count } = await supabase
+            .from('ideas')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1)
+          
+          if (error) throw error
+          return {
+            data: data as Idea[],
+            hasMore: count ? from + PAGE_SIZE < count : false
+          }
       }
     } catch (error) {
       console.error('Error fetching ideas:', error)
