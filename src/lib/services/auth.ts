@@ -4,15 +4,21 @@ import { toast } from 'sonner'
 
 export async function signUp(email: string, password: string, name: string) {
   try {
+    console.log('Starting signup with:', { email, name })
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name: name,
+          username: name,
+          full_name: name
         },
+        emailRedirectTo: `${window.location.origin}/auth/callback`
       },
     })
+
+    console.log('Signup response:', { data, error })
 
     if (error) throw error
 
@@ -21,6 +27,7 @@ export async function signUp(email: string, password: string, name: string) {
     })
     return { user: data.user, error: null }
   } catch (error) {
+    console.error('Signup error:', error)
     toast.error("Registration failed", {
       description: error instanceof Error ? error.message : "Please try again later."
     })
