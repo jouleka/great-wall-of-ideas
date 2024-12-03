@@ -51,6 +51,7 @@ export function useIdeas() {
 
   useEffect(() => {
     resetIdeas()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortType])
 
   const resetIdeas = useCallback(() => {
