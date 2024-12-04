@@ -2,57 +2,67 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Define route patterns
-const protectedActions = ['/api/ideas/vote', '/api/ideas/create'];
-const authRoutes = ['/auth'];
-const publicAuthRoutes = ['/auth/reset-password'];
-
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  try {
+    // Initialize response first
+    const res = NextResponse.next();
+    
+    // Initialize Supabase client
+    const supabase = createMiddlewareClient({ req, res });
+    const { data: { session } } = await supabase.auth.getSession();
 
-  // Refresh session if expired
-  await supabase.auth.getSession();
+    const { pathname } = req.nextUrl;
 
-  // Handle OAuth callback
-  if (req.nextUrl.pathname === '/api/auth/callback-route') {
+    // Static and public routes - return early
+    if (pathname.startsWith('/_next') || 
+        pathname.startsWith('/favicon.ico') ||
+        pathname.startsWith('/public')) {
+      return res;
+    }
+
+    // Public routes
+    if (pathname.startsWith('/ideas') && !pathname.includes('/api')) {
+      return res;
+    }
+
+    // OAuth callback
+    if (pathname === '/api/auth/callback-route') {
+      return res;
+    }
+
+    // Protected API routes
+    if ((pathname.startsWith('/api/ideas/vote') || 
+         pathname.startsWith('/api/ideas/create')) && 
+         !session) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    // Public auth routes
+    if (pathname.startsWith('/auth/reset-password')) {
+      return res;
+    }
+
+    // Redirect from auth pages if logged in
+    if (pathname.startsWith('/auth') && session) {
+      const redirectUrl = new URL('/ideas', req.url);
+      return NextResponse.redirect(redirectUrl);
+    }
+
     return res;
-  }
-
-  const { pathname } = req.nextUrl;
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Allow guest access to /ideas
-  if (pathname.startsWith('/ideas') && !pathname.includes('/api')) {
-    return res;
-  }
-
-  // Protect API routes for voting and creating ideas
-  if (protectedActions.some(route => pathname.startsWith(route)) && !session) {
+  } catch (error) {
+    console.error('Middleware error:', error);
     return new NextResponse(
-      JSON.stringify({ error: 'Authentication required' }),
-      { status: 401 }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'content-type': 'application/json' } }
     );
   }
-
-  // Allow access to reset password page even when authenticated
-  if (publicAuthRoutes.some(route => pathname.startsWith(route))) {
-    return res;
-  }
-
-  // Redirect from auth page if already logged in
-  if (authRoutes.some(route => pathname.startsWith(route)) && session) {
-    return NextResponse.redirect(new URL('/ideas', req.url));
-  }
-
-  return res;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

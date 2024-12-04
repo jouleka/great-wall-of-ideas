@@ -27,13 +27,10 @@ const registerSchema = z.object({
     .string()
     .min(3, "Come on, your username needs at least 3 characters")
     .max(30, "Let's keep it short and sweet - under 30 characters")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Just letters, numbers, and underscores - keeping it simple")
-    .refine(val => !val.toLowerCase().includes('admin'), "Nice try with 'admin' - maybe something more original?")
-    .refine(val => !val.toLowerCase().includes('mod'), "'mod' in username? Getting creative, aren't we?")
-    .refine(val => !val.toLowerCase().includes('root'), "'root'? Let's save that for the garden")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Just letters, numbers, underscores, and hyphens - keeping it simple")
     .refine(
-      val => !['password', 'username', 'admin123', 'test', 'user'].includes(val.toLowerCase()),
-      "That username might be a bit too obvious - try something unique"
+      val => !['admin', 'administrator', 'superadmin', 'root'].includes(val.toLowerCase()),
+      "That username is reserved - try something more personal!"
     ),
 
   email: z
@@ -41,12 +38,9 @@ const registerSchema = z.object({
     .email("Hmm, that doesn't look like a valid email")
     .min(5, "Your email seems a bit too short")
     .max(254, "That's quite a long email you've got there")
-    .refine(val => !val.endsWith('@temp.com'), "We'd prefer a real email - temporary ones are a bit sketchy")
-    .refine(val => !val.endsWith('@tempmail.com'), "Let's use your actual email - we promise to be nice")
-    .refine(val => !val.endsWith('@mailinator.com'), "Real emails only - we're not that scary")
     .refine(
-      val => !['test', 'admin', 'info', 'support'].includes(val.split('@')[0].toLowerCase()),
-      "Something more personal would be great"
+      val => !['@temp.com', '@tempmail.com', '@mailinator.com', '@disposable.com'].some(domain => val.endsWith(domain)),
+      "We'd prefer a real email - we promise to be nice!"
     ),
 
   password: z
@@ -56,14 +50,7 @@ const registerSchema = z.object({
     .regex(
       /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/,
       "Password needs an uppercase letter, lowercase letter, number, and special character"
-    ),
-
-  confirmPassword: z
-    .string()
-    .min(1, "Don't forget to confirm your password")
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords need to match - double check them",
-  path: ["confirmPassword"]
+    )
 })
 
 type RegisterInputs = z.infer<typeof registerSchema>
@@ -128,7 +115,6 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-      console.error(err)
     } finally {
       setIsEmailLoading(false)
     }
@@ -352,7 +338,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   <p className="text-sm text-red-500">{errors.password.message}</p>
                 )}
                 <ul className="text-xs text-muted-foreground space-y-1 mt-2">
-                  <li>• At least 12 characters long</li>
+                  <li>• At least 8 characters long</li>
                   <li>• Mix of upper & lowercase letters</li>
                   <li>• Some numbers for good measure</li>
                   <li>• A special character to spice it up</li>

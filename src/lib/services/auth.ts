@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 
 export async function signUp(email: string, password: string, name: string) {
   try {
-    console.log('Starting signup with:', { email, name })
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -17,8 +16,6 @@ export async function signUp(email: string, password: string, name: string) {
         emailRedirectTo: `${window.location.origin}/auth/callback`
       },
     })
-
-    console.log('Signup response:', { data, error })
 
     if (error) throw error
 
