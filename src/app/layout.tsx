@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,6 +39,8 @@ export default async function RootLayout({
           {children}
         </AuthProvider>
         <Toaster />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
