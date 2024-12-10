@@ -6,7 +6,9 @@ DROP FUNCTION IF EXISTS get_top_rated_ideas(integer, integer);
 CREATE OR REPLACE FUNCTION get_trending_ideas(
   p_limit integer,
   p_offset integer
-) RETURNS SETOF ideas AS $$
+) RETURNS SETOF ideas 
+SET search_path = public
+AS $$
 BEGIN
   RETURN QUERY
   SELECT *
@@ -18,13 +20,15 @@ BEGIN
   LIMIT p_limit
   OFFSET p_offset;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Function to get top rated ideas
 CREATE OR REPLACE FUNCTION get_top_rated_ideas(
   p_limit integer,
   p_offset integer
-) RETURNS SETOF ideas AS $$
+) RETURNS SETOF ideas 
+SET search_path = public
+AS $$
 BEGIN
   RETURN QUERY
   SELECT *
@@ -39,7 +43,7 @@ BEGIN
   LIMIT p_limit
   OFFSET p_offset;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION get_trending_ideas(integer, integer) TO authenticated, anon;

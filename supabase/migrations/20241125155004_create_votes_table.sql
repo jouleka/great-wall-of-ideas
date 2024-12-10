@@ -36,7 +36,9 @@ create policy "Users can delete their own votes." on votes for delete using (aut
 
 -- Create a function to update idea votes
 create
-or replace function update_idea_votes (p_idea_id uuid) returns VOID as $$
+or replace function update_idea_votes (p_idea_id uuid) returns VOID 
+SET search_path = public
+AS $$
 DECLARE
   upvotes_count INT;
   downvotes_count INT;

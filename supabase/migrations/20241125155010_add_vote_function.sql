@@ -7,7 +7,9 @@ CREATE OR REPLACE FUNCTION public.handle_vote(
   p_user_id UUID,
   p_vote_type TEXT
 )
-RETURNS JSONB AS $$
+RETURNS JSONB 
+SET search_path = public
+AS $$
 DECLARE
   existing_vote TEXT;
   vote_count INT;
