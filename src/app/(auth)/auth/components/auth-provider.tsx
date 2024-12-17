@@ -19,22 +19,61 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const supabase = createClientComponentClient()
 
+  // Function to clear auth state
+  const clearAuthState = useCallback(async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      
+      // Only access localStorage after component is mounted
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('supabase.auth.token')
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Error clearing auth state:', error)
+    }
+  }, [supabase])
+
+  // Handle mounting state
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const checkUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error) {
+          console.error('Error checking user:', error)
+          await clearAuthState()
+          return
+        }
+        
         setUser(user)
       } catch (error) {
         console.error('Error checking user:', error)
+        await clearAuthState()
       } finally {
         setLoading(false)
       }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        await clearAuthState()
+      } else if (event === 'TOKEN_REFRESHED' && !session) {
+        await clearAuthState()
+      } else if (session?.user) {
+        setUser(session.user)
+      }
+      
       setLoading(false)
     })
 
@@ -43,26 +82,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, clearAuthState, mounted])
 
   const signIn = useCallback(async (emailOrUsername: string, password: string) => {
+    if (!mounted) return
     try {
       const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password)
       if (error) throw error
     } catch (error) {
       throw error
     }
-  }, [])
+  }, [mounted])
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
+    if (!mounted) return { user: null, error: new Error('Component not mounted') }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: username,
+            username,
+            full_name: username,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
@@ -73,22 +116,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error in signUp:', error)
       return { user: null, error: error instanceof Error ? error : new Error('An unknown error occurred') }
     }
-  }, [supabase])
+  }, [supabase, mounted])
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-  }, [supabase])
+    if (!mounted) return
+    await clearAuthState()
+  }, [clearAuthState, mounted])
 
   const signInWithGoogle = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback-route`,
-      },
-    })
-    if (error) throw error
-  }, [supabase])
+    if (!mounted) return
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+    } catch (error) {
+      console.error('Error signing in with Google:', error)
+      throw error
+    }
+  }, [supabase, mounted])
 
   const value = useMemo(() => ({
     user,
@@ -99,7 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
   }), [user, loading, signIn, signUp, signOut, signInWithGoogle])
 
-  if (loading) {
+  // Only show loading when we have a user and are verifying their session
+  if (!mounted || (loading && user !== null)) {
     return (
       <div className="min-h-screen">
         <Loading text="Setting things up..." />

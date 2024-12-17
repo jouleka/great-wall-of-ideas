@@ -128,13 +128,15 @@ export default function GreatWallOfIdeas() {
           defaultValue="all" 
           className="mb-8"
           value={sortType}
-          onValueChange={(value) => setSortType(value as typeof sortType)}
+          onValueChange={(value) => {
+            setSortType(value as typeof sortType)
+          }}
         >
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
             <TabsTrigger value="all">All Ideas</TabsTrigger>
             <TabsTrigger value="trending">Trending</TabsTrigger>
-            <TabsTrigger value="new">Newest</TabsTrigger>
             <TabsTrigger value="top">Top Rated</TabsTrigger>
+            <TabsTrigger value="my_ideas">My Ideas</TabsTrigger>
           </TabsList>
           <TabsContent value="all">
             <p className="text-sm text-muted-foreground">Discover all groundbreaking ideas from the Great Wall.</p>
@@ -142,11 +144,11 @@ export default function GreatWallOfIdeas() {
           <TabsContent value="trending">
             <p className="text-sm text-muted-foreground">Ideas gaining momentum and capturing attention in the last 7 days.</p>
           </TabsContent>
-          <TabsContent value="new">
-            <p className="text-sm text-muted-foreground">Fresh, innovative ideas recently added to the Wall.</p>
-          </TabsContent>
           <TabsContent value="top">
             <p className="text-sm text-muted-foreground">The most supported and highly regarded ideas of all time.</p>
+          </TabsContent>
+          <TabsContent value="my_ideas">
+            <p className="text-sm text-muted-foreground">View and manage all your submitted ideas.</p>
           </TabsContent>
         </Tabs>
         
@@ -156,18 +158,84 @@ export default function GreatWallOfIdeas() {
           onScrollCapture={handleScroll}
         >
           <div className="relative w-full p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {isLoading ? (
-                // Show 12 skeleton cards while loading
-                Array.from({ length: 12 }).map((_, i) => (
+            {isLoading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
                   <IdeaSkeleton key={i} />
-                ))
-              ) : (
-                filteredIdeas.map((idea) => (
+                ))}
+              </div>
+            )}
+            {!isLoading && !filteredIdeas.length && (
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
+                {debouncedSearchTerm ? (
+                  <>
+                    <div className="rounded-full bg-yellow-500/10 p-3 mb-8">
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                        <Search className="w-6 h-6 text-yellow-500" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-semibold text-foreground mb-3">
+                      No Matches Found
+                    </h3>
+                    <p className="text-muted-foreground max-w-md mb-4">
+                      No ideas match &ldquo;{debouncedSearchTerm}&rdquo;. Try adjusting your search terms or explore other categories.
+                    </p>
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="text-primary hover:text-primary/80 font-medium"
+                    >
+                      Clear Search
+                    </button>
+                  </>
+                ) : sortType !== 'all' ? (
+                  <>
+                    <div className="rounded-full bg-blue-500/10 p-3 mb-8">
+                      <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <Search className="w-6 h-6 text-blue-500" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-semibold text-foreground mb-3">
+                      No Ideas Found in {sortType === 'my_ideas' ? 'Your Ideas' : 
+                                       sortType === 'trending' ? 'Trending' :
+                                       'Top Rated'}
+                    </h3>
+                    <p className="text-muted-foreground max-w-md mb-8">
+                      {sortType === 'my_ideas' ? 
+                        "You haven't shared any ideas yet. Start innovating by creating your first idea!" :
+                        sortType === 'trending' ?
+                        "No trending ideas at the moment. Be the first to start a trend!" :
+                        "No top-rated ideas yet. Share your innovative ideas and gather support!"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-full bg-primary/10 p-3 mb-8">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Search className="w-6 h-6 text-primary" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-semibold text-foreground mb-3">
+                      Be the First Innovator
+                    </h3>
+                    <p className="text-muted-foreground max-w-md mb-8">
+                      Start a trend by sharing your groundbreaking idea. Your innovation could inspire others and spark meaningful change.
+                    </p>
+                    <div className="flex justify-center">
+                      <div className="w-auto">
+                        <CreateIdeaDialog createIdea={handleCreateIdea} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {!isLoading && filteredIdeas.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredIdeas.map((idea) => (
                   <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
             {isLoadingMore && hasMore && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
                 {Array.from({ length: 4 }).map((_, i) => (

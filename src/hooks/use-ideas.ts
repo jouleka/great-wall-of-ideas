@@ -7,33 +7,34 @@ import { voteService } from '../lib/services/vote-service'
 
 export function useIdeas() {
   const [ideas, setIdeas] = useState<Idea[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [sortType, setSortType] = useState<'all' | 'trending' | 'new' | 'top'>('all')
+  const [sortType, setSortType] = useState<'all' | 'trending' | 'my_ideas' | 'top'>('all')
   const pageRef = useRef(0)
   const isFetchingRef = useRef(false)
+  const currentSortTypeRef = useRef(sortType)
   const supabase = createClientComponentClient()
 
   const loadIdeas = useCallback(async (page: number) => {
     if (isFetchingRef.current) return
     
+    isFetchingRef.current = true
+    if (page === 0) {
+      setIsLoading(true)
+      setIdeas([]) // Clear existing ideas when switching tabs
+    } else {
+      setIsLoadingMore(true)
+    }
+
     try {
-      isFetchingRef.current = true
-      
-      if (page === 0) {
-        setIsLoading(true)
-      } else {
-        setIsLoadingMore(true)
-      }
-      
-      const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page, sortType)
+      const { data, hasMore: moreAvailable } = await ideaService.getIdeas(page, currentSortTypeRef.current)
       
       setIdeas(prev => {
         const newIdeas = page === 0 ? data : [...prev, ...data]
         const uniqueIdeas = Array.from(
-          new Map(newIdeas.map(item => [item.id, item])).values()
-        )
+          new Map(newIdeas.map((item: Idea) => [item.id, item])).values()
+        ) as Idea[]
         return uniqueIdeas
       })
       
@@ -42,29 +43,30 @@ export function useIdeas() {
     } catch (error) {
       console.error('Error loading ideas:', error)
       toast.error("Failed to load ideas")
+      if (page === 0) {
+        setIdeas([])
+      }
     } finally {
       setIsLoading(false)
       setIsLoadingMore(false)
       isFetchingRef.current = false
     }
-  }, [sortType])
+  }, [])
 
-  useEffect(() => {
-    resetIdeas()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortType])
-
-  const resetIdeas = useCallback(() => {
-    setIdeas([])
-    setHasMore(true)
-    setIsLoading(true)
-    setIsLoadingMore(false)
+  const resetAndLoad = useCallback(() => {
     pageRef.current = 0
-    isFetchingRef.current = false
     loadIdeas(0)
   }, [loadIdeas])
 
+  // Update currentSortTypeRef when sortType changes
+  useEffect(() => {
+    currentSortTypeRef.current = sortType
+    resetAndLoad()
+  }, [sortType, resetAndLoad])
+
   const handleVote = useCallback(async (ideaId: string, voteType: 'upvote' | 'downvote') => {
+    const ideaStateBeforeVote = [...ideas]
+    
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -75,36 +77,16 @@ export function useIdeas() {
       const idea = ideas.find(i => i.id === ideaId)
       if (!idea) return
 
-      const previousState = [...ideas]
-
       const currentVote = await voteService.getCurrentVote(ideaId, user.id)
 
-      let newUpvotes = idea.upvotes
-      let newDownvotes = idea.downvotes
-
-      if (!currentVote) {
-        if (voteType === 'upvote') newUpvotes++
-        else newDownvotes++
-      } else if (currentVote === voteType) {
-        if (voteType === 'upvote') newUpvotes--
-        else newDownvotes--
-      } else {
-        if (voteType === 'upvote') {
-          newUpvotes++
-          newDownvotes--
-        } else {
-          newUpvotes--
-          newDownvotes++
-        }
-      }
-
+      // Optimistic update
       setIdeas(prev => 
         prev.map(i => {
           if (i.id !== ideaId) return i
           return {
             ...i,
-            upvotes: newUpvotes,
-            downvotes: newDownvotes
+            upvotes: voteType === 'upvote' ? i.upvotes + 1 : i.upvotes - (currentVote === 'upvote' ? 1 : 0),
+            downvotes: voteType === 'downvote' ? i.downvotes + 1 : i.downvotes - (currentVote === 'downvote' ? 1 : 0)
           }
         })
       )
@@ -112,11 +94,12 @@ export function useIdeas() {
       const result = await voteService.handleVote(ideaId, user.id, voteType)
 
       if (!result.success) {
-        setIdeas(previousState)
+        setIdeas(ideaStateBeforeVote)
         toast.error(result.message)
         return
       }
 
+      // Update with actual server values
       setIdeas(prev =>
         prev.map(idea =>
           idea.id === ideaId
@@ -129,24 +112,17 @@ export function useIdeas() {
         )
       )
 
-      switch (result.action) {
-        case 'added':
-          toast.success(`Vote recorded`)
-          break
-        case 'removed':
-          toast.success('Vote removed')
-          break
-        case 'updated':
-          toast.success('Vote updated')
-          break
+      // Reload ideas if we're in top tab to maintain correct order
+      if (sortType === 'top') {
+        resetAndLoad()
       }
 
     } catch (error) {
       console.error('Error voting:', error)
       toast.error("Failed to register vote")
-      loadIdeas(pageRef.current)
+      setIdeas(ideaStateBeforeVote)
     }
-  }, [supabase, ideas, loadIdeas])
+  }, [supabase, ideas, resetAndLoad, sortType])
 
   const createIdea = useCallback(async (newIdea: Omit<Idea, 'id' | 'created_at' | 'updated_at' | 'upvotes' | 'downvotes' | 'views'>) => {
     try {
@@ -168,12 +144,12 @@ export function useIdeas() {
         author_name: newIdea.is_anonymous ? 'Anonymous' : (profile?.username || 'Unknown')
       })
 
-      resetIdeas()
+      resetAndLoad()
     } catch (error) {
       console.error('Error creating idea:', error)
       toast.error("Failed to create idea")
     }
-  }, [supabase, resetIdeas])
+  }, [supabase, resetAndLoad])
 
   return {
     ideas,
@@ -183,8 +159,10 @@ export function useIdeas() {
     handleVote,
     createIdea,
     loadMore: () => loadIdeas(pageRef.current + 1),
-    resetIdeas,
+    resetIdeas: resetAndLoad,
     sortType,
-    setSortType
+    setSortType: useCallback((newSortType: typeof sortType) => {
+      setSortType(newSortType)
+    }, [])
   }
 }
