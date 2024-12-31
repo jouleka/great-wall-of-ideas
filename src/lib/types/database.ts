@@ -35,7 +35,7 @@ export interface DatabaseIdea {
   tags: string[];
   status: 'pending' | 'approved' | 'rejected';
   is_featured: boolean;
-  company: string;
+  target_audience: string;
   category: string;
 }
 

@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 import { createClientComponentClient, User } from '@supabase/auth-helpers-nextjs'
 import { authService } from '@/lib/services/auth-service'
 import { Loading } from "@/components/ui/loading"
+import { toast } from "sonner"
+import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
   user: User | null
@@ -21,68 +23,131 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const supabase = createClientComponentClient()
+  const router = useRouter()
 
   // Function to clear auth state
   const clearAuthState = useCallback(async () => {
     try {
-      await supabase.auth.signOut()
+      setLoading(true)
+      
+      // First sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      
+      // Then clear local state
       setUser(null)
       
-      // Only access localStorage after component is mounted
+      // Clear any stored tokens and session data
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('supabase.auth.token')
-        window.location.reload()
+        // Clear all Supabase-related items from localStorage
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || 
+              key.startsWith('supabase.') || 
+              key.includes('token') || 
+              key.includes('session')) {
+            localStorage.removeItem(key)
+          }
+        })
       }
+
+      // Force a hard reload of all data
+      router.refresh()
+      
+      // Navigate to auth page
+      router.push('/auth')
+
+      toast.success('Logged out successfully')
     } catch (error) {
       console.error('Error clearing auth state:', error)
+      toast.error('Error during logout', {
+        description: 'Some session data may not have been cleared properly.'
+      })
+      throw error
+    } finally {
+      setLoading(false)
     }
-  }, [supabase])
+  }, [supabase, router])
 
   // Handle mounting state
   useEffect(() => {
     setMounted(true)
+    return () => setMounted(false)
   }, [])
 
   useEffect(() => {
     if (!mounted) return
 
+    let isSubscribed = true
+
     const checkUser = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (error) {
-          console.error('Error checking user:', error)
-          await clearAuthState()
+        if (error || !session) {
+          console.error('Error checking session:', error)
+          if (isSubscribed) {
+            setUser(null)
+            setLoading(false)
+          }
           return
         }
         
-        setUser(user)
+        if (isSubscribed) {
+          setUser(session.user)
+          setLoading(false)
+        }
       } catch (error) {
         console.error('Error checking user:', error)
-        await clearAuthState()
-      } finally {
-        setLoading(false)
+        if (isSubscribed) {
+          setUser(null)
+          setLoading(false)
+        }
       }
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        await clearAuthState()
-      } else if (event === 'TOKEN_REFRESHED' && !session) {
-        await clearAuthState()
-      } else if (session?.user) {
-        setUser(session.user)
-      }
+      console.log('Auth state changed:', event, !!session)
       
-      setLoading(false)
+      if (!isSubscribed) return
+
+      switch (event) {
+        case 'SIGNED_OUT':
+          setUser(null)
+          setLoading(false)
+          break
+        case 'SIGNED_IN':
+          if (session?.user) {
+            setUser(session.user)
+          }
+          setLoading(false)
+          break
+        case 'TOKEN_REFRESHED':
+          if (!session) {
+            setUser(null)
+          } else if (session.user) {
+            setUser(session.user)
+          }
+          setLoading(false)
+          break
+        default:
+          // For any other event, just update the loading state
+          setLoading(false)
+          break
+      }
     })
 
     checkUser()
 
     return () => {
+      isSubscribed = false
       subscription.unsubscribe()
     }
-  }, [supabase, clearAuthState, mounted])
+  }, [supabase, mounted])
+
+  const signOut = useCallback(async () => {
+    if (!mounted) return
+    await clearAuthState()
+  }, [clearAuthState, mounted])
 
   const signIn = useCallback(async (emailOrUsername: string, password: string) => {
     if (!mounted) return
@@ -118,18 +183,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, mounted])
 
-  const signOut = useCallback(async () => {
-    if (!mounted) return
-    await clearAuthState()
-  }, [clearAuthState, mounted])
-
   const signInWithGoogle = useCallback(async () => {
     if (!mounted) return
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/ideas`,
         },
       })
       if (error) throw error
@@ -148,8 +208,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
   }), [user, loading, signIn, signUp, signOut, signInWithGoogle])
 
-  // Only show loading when we have a user and are verifying their session
-  if (!mounted || (loading && user !== null)) {
+  // Only show loading when we're checking the initial session
+  if (!mounted || (loading && user === null)) {
     return (
       <div className="min-h-screen">
         <Loading text="Setting things up..." />

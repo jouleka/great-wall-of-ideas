@@ -47,10 +47,10 @@ export function ProfileHeader() {
   }), { ideas: 0, comments: 0, votes: 0 })
   
   return (
-    <div className="relative w-full mb-8">
+    <div className="relative w-full mb-4 sm:mb-8">
       <ActivityGraph />
       
-      <div className="relative pt-20 pb-8 px-4">
+      <div className="relative pt-16 sm:pt-20 pb-6 sm:pb-8 px-3 sm:px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col items-center sm:flex-row sm:items-end sm:space-x-6">
             {/* Avatar Upload Section */}
@@ -58,15 +58,15 @@ export function ProfileHeader() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="relative -mt-24 mb-4 sm:mb-0"
+              className="relative -mt-20 sm:-mt-24 mb-3 sm:mb-0"
             >
-              <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
+              <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background shadow-xl">
                 <AvatarImage 
                   src={user.profile.avatar_url || ''} 
                   alt={user.profile.username || ''}
                   onError={(e) => e.currentTarget.src = ''}
                 />
-                <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
+                <AvatarFallback className="text-2xl sm:text-4xl">{initials}</AvatarFallback>
               </Avatar>
               <div className="absolute bottom-0 right-0 z-10">
                 <input
@@ -80,15 +80,15 @@ export function ProfileHeader() {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="rounded-full"
+                  className="rounded-full h-8 w-8 sm:h-9 sm:w-9"
                   disabled={isUploading}
                   onClick={() => document.getElementById('avatar-upload')?.click()}
                   type="button"
                 >
                   {isUploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   ) : (
-                    <Camera className="h-4 w-4" />
+                    <Camera className="h-3 w-3 sm:h-4 sm:w-4" />
                   )}
                 </Button>
               </div>
@@ -99,13 +99,13 @@ export function ProfileHeader() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="flex-1 text-center sm:text-left"
+              className="flex-1 text-center sm:text-left space-y-1 mb-4 sm:mb-0"
             >
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {user.profile.full_name}
               </h1>
               {user.profile.username && (
-                <p className="text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   @{user.profile.username}
                 </p>
               )}
@@ -116,27 +116,27 @@ export function ProfileHeader() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
-              className="flex gap-6 mt-4 sm:mt-0"
+              className="flex gap-4 sm:gap-6 mt-1 sm:mt-0"
             >
               {isLoading ? (
                 <>
-                  <Skeleton className="h-16 w-16" />
-                  <Skeleton className="h-16 w-16" />
-                  <Skeleton className="h-16 w-16" />
+                  <Skeleton className="h-14 w-14 sm:h-16 sm:w-16" />
+                  <Skeleton className="h-14 w-14 sm:h-16 sm:w-16" />
+                  <Skeleton className="h-14 w-14 sm:h-16 sm:w-16" />
                 </>
               ) : (
                 <>
                   <div className="text-center">
-                    <p className="text-2xl font-semibold">{totals.ideas}</p>
-                    <p className="text-sm text-muted-foreground">Ideas</p>
+                    <p className="text-xl sm:text-2xl font-semibold">{totals.ideas}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Ideas</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-semibold">{totals.comments}</p>
-                    <p className="text-sm text-muted-foreground">Comments</p>
+                    <p className="text-xl sm:text-2xl font-semibold">{totals.comments}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Comments</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-semibold">{totals.votes}</p>
-                    <p className="text-sm text-muted-foreground">Votes</p>
+                    <p className="text-xl sm:text-2xl font-semibold">{totals.votes}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Votes</p>
                   </div>
                 </>
               )}

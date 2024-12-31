@@ -3,10 +3,15 @@ CREATE TABLE comments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   idea_id UUID REFERENCES ideas(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  parent_id UUID REFERENCES comments(id) ON DELETE CASCADE,
   author_name TEXT,
   content TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
 );
+
+-- Add indexes for better performance
+CREATE INDEX idx_comments_parent_id ON comments(parent_id);
+CREATE INDEX idx_comments_created_at ON comments(created_at DESC);
 
 -- Enable Row Level Security
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;

@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import dynamic from 'next/dynamic'
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 import { Idea } from "@/lib/types/idea"
 import { useRouter } from 'next/navigation'
+import DOMPurify from 'isomorphic-dompurify'
+import { cn } from "@/lib/utils"
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -26,7 +29,7 @@ interface CreateIdeaDialogProps {
 type FormInputs = {
   title: string;
   description: string;
-  company: string;
+  target_audience: string;
   category: string;
   tags: string;
   is_anonymous: boolean;
@@ -34,23 +37,24 @@ type FormInputs = {
 
 const STORAGE_KEY = 'idea-form-draft'
 
-function sanitizeText(text: string) {
+function sanitizeText(text: string, allowHtml: boolean = false) {
   if (!text) return '';
   
-  // Convert line breaks to spaces and normalize whitespace
-  const normalized = text
-    .replace(/\r\n|\r|\n/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  if (allowHtml) {
+    const clean = DOMPurify.sanitize(text, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote'],
+      ALLOWED_ATTR: ['href', 'target', 'rel'],
+    });
+    return clean;
+  }
   
-  // Only remove potentially harmful HTML/script content but preserve URLs
-  return normalized
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/javascript:/gi, '[removed]') // Replace javascript: protocol
-    .replace(/data:/gi, '[removed]') // Replace data: protocol
-    .replace(/vbscript:/gi, '[removed]') // Replace vbscript: protocol
-    .replace(/on\w+\s*=/gi, '[removed]') // Remove event handlers
-    .replace(/style\s*=/gi, '[removed]'); // Remove style attributes
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/javascript:/gi, '[removed]')
+    .replace(/data:/gi, '[removed]')
+    .replace(/vbscript:/gi, '[removed]');
 }
 
 function formatTags(tags: string): string[] {
@@ -66,12 +70,12 @@ function formatTags(tags: string): string[] {
 
 export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormInputs>()
+  const [description, setDescription] = useState('')
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
-  // Load saved form data on mount
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY)
     if (savedData) {
@@ -87,7 +91,6 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
     }
   }, [setValue])
 
-  // Save form data on changes
   const formValues = watch()
   useEffect(() => {
     if (Object.values(formValues).some(value => value)) {
@@ -105,8 +108,8 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
     try {
       await createIdea({ 
         title: sanitizeText(data.title),
-        description: sanitizeText(data.description),
-        company: sanitizeText(data.company),
+        description: sanitizeText(description, true),
+        target_audience: sanitizeText(data.target_audience),
         category: sanitizeText(data.category),
         tags: formatTags(data.tags),
         user_id: user.id,
@@ -116,8 +119,8 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
         is_anonymous: data.is_anonymous
       })
 
-      // Clear form and local storage after successful submission
       reset()
+      setDescription('')
       localStorage.removeItem(STORAGE_KEY)
       setIsOpen(false)
       
@@ -142,7 +145,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [user, createIdea, reset])
+  }, [user, createIdea, reset, description])
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -151,19 +154,21 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
           <Rocket className="mr-2 h-5 w-5" /> Share Your Idea
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className={cn(
+        "p-0 flex flex-col overflow-hidden",
+        !user ? "sm:max-w-[400px] h-auto max-h-[90vh]" : "sm:max-w-[600px] md:max-w-[800px] h-[95vh] max-h-[95vh]"
+      )}>
         {!user ? (
-          // Guest user view
-          <div className="space-y-6">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center">
+          <div className="p-6">
+            <DialogHeader className="space-y-4">
+              <DialogTitle className="text-xl font-semibold text-center">
                 Sign in to Share Ideas
               </DialogTitle>
-              <DialogDescription>
-                Join our community to share your brilliant ideas and engage with others!
+              <DialogDescription className="text-sm text-center text-muted-foreground">
+                Join our community to share your brilliant ideas!
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 mt-6">
               <Button 
                 onClick={() => {
                   setIsOpen(false)
@@ -189,160 +194,197 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
             </div>
           </div>
         ) : (
-          // Authenticated user view - existing form
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center">
-                Got a Bright Idea?
-              </DialogTitle>
-              <DialogDescription>
-                Share it with the world - you never know who might build it!
-              </DialogDescription>
-            </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-4 sm:p-6 md:p-8">
+              <DialogHeader className="space-y-3">
+                <DialogTitle className="text-2xl sm:text-3xl font-bold text-center">
+                  Got a Bright Idea?
+                </DialogTitle>
+                <DialogDescription className="text-base sm:text-lg text-center max-w-md mx-auto">
+                  Share it with the world - you never know who might build it!
+                </DialogDescription>
+              </DialogHeader>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-              <div>
-                <Label htmlFor="title" className="text-lg font-semibold flex items-center">
-                  <Lightbulb className="mr-2 h-5 w-5" /> What&apos;s Your Idea?
-                </Label>
-                <Input
-                  id="title"
-                  {...register("title", {
-                    required: "Title is required",
-                    minLength: {
-                      value: 3,
-                      message: "Title must be at least 3 characters"
-                    },
-                    maxLength: {
-                      value: 100,
-                      message: "Title must be less than 100 characters"
-                    }
-                  })}
-                  className="mt-1"
-                  placeholder="Give it a catchy title"
-                  aria-describedby="title-error"
-                />
-                {errors.title && (
-                  <p id="title-error" className="text-sm text-red-500 mt-1">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="title" className="text-base font-semibold flex items-center">
+                      <Lightbulb className="mr-2 h-5 w-5" /> What&apos;s Your Idea?
+                    </Label>
+                    <Input
+                      id="title"
+                      {...register("title", {
+                        required: "Title is required",
+                        minLength: {
+                          value: 3,
+                          message: "Title must be at least 3 characters"
+                        },
+                        maxLength: {
+                          value: 100,
+                          message: "Title must be less than 100 characters"
+                        }
+                      })}
+                      className="h-10"
+                      placeholder="Enter a concise title for your idea"
+                      aria-describedby="title-error"
+                    />
+                    {errors.title && (
+                      <p id="title-error" className="text-sm text-red-500 mt-1">
+                        {errors.title.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="description" className="text-lg font-semibold flex items-center">
-                  <Target className="mr-2 h-5 w-5" /> Tell Us More
-                </Label>
-                <Textarea
-                  id="description"
-                  {...register("description", {
-                    required: "Description is required",
-                    minLength: {
-                      value: 20,
-                      message: "Description must be at least 20 characters"
-                    },
-                    maxLength: {
-                      value: 2000,
-                      message: "Description must be less than 2000 characters"
-                    }
-                  })}
-                  className="mt-1"
-                  placeholder="Paint us a picture - what makes this special?"
-                  rows={4}
-                  aria-describedby="description-error"
-                />
-                {errors.description && (
-                  <p id="description-error" className="text-sm text-red-500 mt-1">
-                    {errors.description.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="description" className="text-base font-semibold flex items-center">
+                      <Target className="mr-2 h-5 w-5" /> Tell Us More
+                    </Label>
+                    <RichTextEditor
+                      content={description}
+                      onChange={setDescription}
+                      placeholder="Describe your idea in detail"
+                      maxLength={2000}
+                      error={!!errors.description}
+                    />
+                    {errors.description && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.description.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="company" className="text-lg font-semibold flex items-center">
-                  <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
-                </Label>
-                <Input
-                  id="company"
-                  {...register("company", { required: "Company is required" })}
-                  className="mt-1"
-                  placeholder="Which company could make this happen?"
-                  aria-describedby="company-error"
-                />
-                {errors.company && (
-                  <p id="company-error" className="text-sm text-red-500 mt-1">
-                    {errors.company.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="target_audience" className="text-base font-semibold flex items-center">
+                      <Building className="mr-2 h-5 w-5" /> Who&apos;s It For?
+                    </Label>
+                    <Input
+                      id="target_audience"
+                      {...register("target_audience", { 
+                        required: "Target audience is required",
+                        minLength: {
+                          value: 2,
+                          message: "Target audience must be at least 2 characters"
+                        },
+                        maxLength: {
+                          value: 50,
+                          message: "Target audience must be less than 50 characters"
+                        }
+                      })}
+                      className="h-10"
+                      placeholder="e.g., Students, Netflix, Local Restaurants, Remote Workers"
+                      aria-describedby="target-audience-description"
+                    />
+                    <p id="target-audience-description" className="text-sm text-muted-foreground">
+                      Specify who would benefit from this idea (max 50 characters)
+                    </p>
+                    {errors.target_audience && (
+                      <p id="target-audience-error" className="text-sm text-red-500 mt-1">
+                        {errors.target_audience.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="category" className="text-lg font-semibold flex items-center">
-                  <Tag className="mr-2 h-5 w-5" /> Category
-                </Label>
-                <Input
-                  id="category"
-                  {...register("category", { required: "Category is required" })}
-                  className="mt-1"
-                  placeholder="e.g., Tech, Health, Education"
-                  aria-describedby="category-error"
-                />
-                {errors.category && (
-                  <p id="category-error" className="text-sm text-red-500 mt-1">
-                    {errors.category.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-base font-semibold flex items-center">
+                      <Tag className="mr-2 h-5 w-5" /> Category
+                    </Label>
+                    <Input
+                      id="category"
+                      {...register("category", { 
+                        required: "Category is required",
+                        minLength: {
+                          value: 2,
+                          message: "Category must be at least 2 characters"
+                        },
+                        maxLength: {
+                          value: 30,
+                          message: "Category must be less than 30 characters"
+                        }
+                      })}
+                      className="h-10"
+                      placeholder="e.g., Technology, Education, Entertainment"
+                      aria-describedby="category-description"
+                    />
+                    <p id="category-description" className="text-sm text-muted-foreground">
+                      Choose a broad category that best fits your idea
+                    </p>
+                    {errors.category && (
+                      <p id="category-error" className="text-sm text-red-500 mt-1">
+                        {errors.category.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="tags" className="text-lg font-semibold flex items-center">
-                  <Tag className="mr-2 h-5 w-5" /> Tags
-                </Label>
-                <Input
-                  id="tags"
-                  {...register("tags")}
-                  className="mt-1"
-                  placeholder="Enter tags separated by commas"
-                  aria-describedby="tags-error"
-                />
-                {errors.tags && (
-                  <p id="tags-error" className="text-sm text-red-500 mt-1">
-                    {errors.tags.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="tags" className="text-base font-semibold flex items-center">
+                      <Tag className="mr-2 h-5 w-5" /> Tags
+                    </Label>
+                    <Input
+                      id="tags"
+                      {...register("tags", {
+                        pattern: {
+                          value: /^[a-zA-Z0-9\s,\-_]+$/,
+                          message: "Tags can only contain letters, numbers, spaces, commas, hyphens and underscores"
+                        },
+                        validate: {
+                          maxTags: (value) => 
+                            value.split(',').filter(tag => tag.trim()).length <= 8 || 
+                            "Maximum 8 tags allowed",
+                          tagLength: (value) => 
+                            value.split(',').every(tag => {
+                              const trimmed = tag.trim()
+                              return trimmed.length >= 2 && trimmed.length <= 15
+                            }) || 
+                            "Each tag must be between 2 and 15 characters"
+                        }
+                      })}
+                      className="h-10"
+                      placeholder="e.g., mobile-app, ai, productivity (max 8 tags)"
+                      aria-describedby="tags-description"
+                    />
+                    <p id="tags-description" className="text-sm text-muted-foreground">
+                      Add up to 8 tags (2-15 chars each), separated by commas
+                    </p>
+                    {errors.tags && (
+                      <p id="tags-error" className="text-sm text-red-500 mt-1">
+                        {errors.tags.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_anonymous"
-                  {...register("is_anonymous")}
-                  className="mr-2"
-                />
-                <Label htmlFor="is_anonymous" className="text-lg font-semibold flex items-center">
-                  <Eye className="mr-2 h-5 w-5" /> Post Anonymously
-                </Label>
-              </div>
+                  <div className="flex items-center sm:col-span-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="is_anonymous"
+                      {...register("is_anonymous")}
+                      className="mr-2 h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="is_anonymous" className="text-base font-semibold flex items-center cursor-pointer">
+                      <Eye className="mr-2 h-5 w-5" /> Post Anonymously
+                    </Label>
+                  </div>
+                </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 px-6 rounded-lg shadow-md"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    Add to the Great Wall
-                  </>
-                )}
-              </Button>
-            </form>
-          </>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold h-11 sm:h-12 text-base sm:text-lg rounded-lg shadow-md mt-6"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Add to the Great Wall
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>

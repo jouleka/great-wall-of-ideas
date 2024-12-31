@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useCallback, useEffect } from "react"
-import { motion, useScroll } from "framer-motion"
+import { motion } from "framer-motion"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,6 +40,23 @@ function IdeaSkeleton() {
   )
 }
 
+// Add this utility function at the top of the file
+const GRID_LAYOUTS = {
+  sm: "grid-cols-1",
+  md: "grid-cols-2",
+  lg: "grid-cols-3",
+  xl: "grid-cols-4"
+} as const
+
+// Add this utility function for dynamic placeholder text
+const getSearchPlaceholder = () => {
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    return window.innerWidth < 640 ? "Search ideas..." : "Search for groundbreaking ideas..."
+  }
+  return "Search ideas..." // Default for SSR
+}
+
 export default function GreatWallOfIdeas() {
   const { 
     isLoading, 
@@ -56,7 +73,17 @@ export default function GreatWallOfIdeas() {
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll()
+  const [searchPlaceholder, setSearchPlaceholder] = useState(getSearchPlaceholder())
+
+  // Add effect to update placeholder on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setSearchPlaceholder(getSearchPlaceholder())
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const filteredIdeas = useMemo(() => {
     if (!debouncedSearchTerm) return ideas
@@ -65,7 +92,7 @@ export default function GreatWallOfIdeas() {
     return ideas.filter(idea =>
       idea.title.toLowerCase().includes(searchLower) ||
       idea.description.toLowerCase().includes(searchLower) ||
-      idea.company.toLowerCase().includes(searchLower)
+      idea.target_audience.toLowerCase().includes(searchLower)
     )
   }, [ideas, debouncedSearchTerm])
 
@@ -92,81 +119,95 @@ export default function GreatWallOfIdeas() {
       className="min-h-screen overflow-hidden font-sans"
       style={{ 
         backgroundColor: "hsl(var(--background))",
-        opacity: scrollYProgress 
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Header - always single row */}
+        <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground truncate">
             The Great Wall of Ideas
           </h1>
-          <UserProfile />
+          <div className="flex-shrink-0">
+            <UserProfile />
+          </div>
         </div>
         
-        <div className="mb-8 flex items-center space-x-4">
-          <div className="flex-grow">
-            <Label htmlFor="search" className="text-lg font-semibold block mb-2">Explore Innovations</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+        {/* Improved search and create layout - always single row */}
+        <div className="mb-6 sm:mb-8">
+          <Label htmlFor="search" className="text-base lg:text-lg font-semibold block mb-2">
+            Explore Innovations
+          </Label>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 id="search"
                 type="text"
-                placeholder="Search for groundbreaking ideas..."
+                placeholder={searchPlaceholder}
                 value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 w-full text-sm sm:text-base"
               />
             </div>
-          </div>
-          <div className="flex-shrink-0">
-            <Label className="text-lg font-semibold block mb-2 opacity-0">Create</Label>
-            <CreateIdeaDialog createIdea={handleCreateIdea} />
+            <div className="flex-shrink-0">
+              <CreateIdeaDialog createIdea={handleCreateIdea} />
+            </div>
           </div>
         </div>
         
+        {/* Improved tabs layout */}
         <Tabs 
           defaultValue="all" 
-          className="mb-8"
+          className="mb-6 sm:mb-8"
           value={sortType}
-          onValueChange={(value) => {
-            setSortType(value as typeof sortType)
-          }}
+          onValueChange={(value) => setSortType(value as typeof sortType)}
         >
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
-            <TabsTrigger value="all">All Ideas</TabsTrigger>
-            <TabsTrigger value="trending">Trending</TabsTrigger>
-            <TabsTrigger value="top">Top Rated</TabsTrigger>
-            <TabsTrigger value="my_ideas">My Ideas</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-4 lg:gap-0 gap-2">
+            <TabsTrigger value="all" className="px-2 sm:px-4 bg-muted">All Ideas</TabsTrigger>
+            <TabsTrigger value="trending" className="px-2 sm:px-4 bg-muted">Trending</TabsTrigger>
+            <TabsTrigger value="top" className="px-2 sm:px-4 bg-muted">Top Rated</TabsTrigger>
+            <TabsTrigger value="my_ideas" className="px-2 sm:px-4 bg-muted">My Ideas</TabsTrigger>
           </TabsList>
-          <TabsContent value="all">
-            <p className="text-sm text-muted-foreground">Discover all groundbreaking ideas from the Great Wall.</p>
+          <TabsContent value="all" className="px-1">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-10 lg:mt-2">
+              Discover all groundbreaking ideas from the Great Wall.
+            </p>
           </TabsContent>
-          <TabsContent value="trending">
-            <p className="text-sm text-muted-foreground">Ideas gaining momentum and capturing attention in the last 7 days.</p>
+          <TabsContent value="trending" className="px-1">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-10 lg:mt-2">
+              Ideas gaining momentum and capturing attention.
+            </p>
           </TabsContent>
-          <TabsContent value="top">
-            <p className="text-sm text-muted-foreground">The most supported and highly regarded ideas of all time.</p>
+          <TabsContent value="top" className="px-1">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-10 lg:mt-2">
+              The most supported and highly regarded ideas of all time.
+            </p>
           </TabsContent>
-          <TabsContent value="my_ideas">
-            <p className="text-sm text-muted-foreground">View and manage all your submitted ideas.</p>
+          <TabsContent value="my_ideas" className="px-1">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-10 lg:mt-2">
+              View and manage all your submitted ideas.
+            </p>
           </TabsContent>
         </Tabs>
         
+        {/* Improved scroll area */}
         <ScrollArea 
           ref={scrollRef}
-          className="h-[calc(100vh-24rem)] w-full rounded-lg border border-border shadow-xl scroll-area" 
+          className="h-[calc(100vh-16rem)] sm:h-[calc(100vh-20rem)] w-full rounded-lg border border-border shadow-xl" 
           onScrollCapture={handleScroll}
         >
-          <div className="relative w-full p-4">
+          <div className="p-3 sm:p-4">
             {isLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className={`grid gap-3 sm:gap-4 ${GRID_LAYOUTS.sm} sm:${GRID_LAYOUTS.md} lg:${GRID_LAYOUTS.lg} xl:${GRID_LAYOUTS.xl}`}>
                 {Array.from({ length: 12 }).map((_, i) => (
                   <IdeaSkeleton key={i} />
                 ))}
               </div>
             )}
+            
+            {/* Empty states remain mostly the same, just adjust some spacing */}
             {!isLoading && !filteredIdeas.length && (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
+              <div className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] text-center px-4">
                 {debouncedSearchTerm ? (
                   <>
                     <div className="rounded-full bg-yellow-500/10 p-3 mb-8">
@@ -229,15 +270,17 @@ export default function GreatWallOfIdeas() {
                 )}
               </div>
             )}
+            
             {!isLoading && filteredIdeas.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className={`grid gap-3 sm:gap-4 ${GRID_LAYOUTS.sm} sm:${GRID_LAYOUTS.md} lg:${GRID_LAYOUTS.lg} xl:${GRID_LAYOUTS.xl}`}>
                 {filteredIdeas.map((idea) => (
                   <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
                 ))}
               </div>
             )}
+            
             {isLoadingMore && hasMore && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+              <div className={`grid gap-3 sm:gap-4 mt-4 ${GRID_LAYOUTS.sm} sm:${GRID_LAYOUTS.md} lg:${GRID_LAYOUTS.lg} xl:${GRID_LAYOUTS.xl}`}>
                 {Array.from({ length: 4 }).map((_, i) => (
                   <IdeaSkeleton key={`more-${i}`} />
                 ))}

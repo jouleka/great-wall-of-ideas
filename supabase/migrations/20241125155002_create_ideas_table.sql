@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS ideas (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  company TEXT NOT NULL,
+  target_audience TEXT NOT NULL,
   category TEXT NOT NULL,
   user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),

@@ -304,11 +304,12 @@ export function ProfileContent() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.3 }}
+      className="px-4 sm:px-0"
     >
       <form onSubmit={handleSubmit}>
         <Card className="backdrop-blur-sm bg-card/50">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
               <span>Profile Information</span>
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -317,59 +318,59 @@ export function ProfileContent() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-6 sm:grid-cols-2">
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name" className="text-sm sm:text-base">Full Name</Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
                   onChange={e => handleChange('full_name', e.target.value)}
-                  className="bg-background"
+                  className="bg-background h-9 sm:h-10"
                   disabled={isSaving}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username" className="text-sm sm:text-base">Username</Label>
                 <Input
                   id="username"
                   value={formData.username}
                   onChange={e => handleChange('username', e.target.value)}
-                  className={cn("bg-background", errors.username && "border-destructive")}
+                  className={cn("bg-background h-9 sm:h-10", errors.username && "border-destructive")}
                   disabled={isSaving}
                   aria-invalid={!!errors.username}
                 />
                 {errors.username && (
-                  <p className="text-sm text-destructive">{errors.username}</p>
+                  <p className="text-xs sm:text-sm text-destructive">{errors.username}</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
+              <Label htmlFor="website" className="text-sm sm:text-base">Website</Label>
               <Input
                 id="website"
                 type="url"
                 value={formData.website}
                 onChange={e => handleChange('website', e.target.value)}
-                className={cn("bg-background", errors.website && "border-destructive")}
+                className={cn("bg-background h-9 sm:h-10", errors.website && "border-destructive")}
                 disabled={isSaving}
                 aria-invalid={!!errors.website}
               />
               {errors.website && (
-                <p className="text-sm text-destructive">{errors.website}</p>
+                <p className="text-xs sm:text-sm text-destructive">{errors.website}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio" className="text-sm sm:text-base">Bio</Label>
               <Textarea
                 id="bio"
                 value={formData.bio}
                 onChange={e => handleChange('bio', e.target.value)}
                 rows={4}
-                className="bg-background resize-none"
+                className="bg-background resize-none min-h-[100px] sm:min-h-[120px]"
                 disabled={isSaving}
                 maxLength={500}
               />
@@ -378,33 +379,33 @@ export function ProfileContent() {
               </p>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 sm:gap-2 pt-2">
               <Button 
                 type="button"
                 variant="outline"
                 onClick={() => router.push('/ideas')}
-                className="gap-2"
+                className="gap-2 h-9 sm:h-10 w-full sm:w-auto"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Ideas
               </Button>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
                       type="button"
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 h-9 sm:h-10 w-full sm:w-auto"
                       onClick={() => setIsPasswordDialogOpen(true)}
                     >
                       <AlertCircle className="h-4 w-4" />
                       Change Password
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[425px] p-4 sm:p-6">
                     <DialogHeader>
-                      <DialogTitle>Change Password</DialogTitle>
+                      <DialogTitle className="text-lg sm:text-xl">Change Password</DialogTitle>
                     </DialogHeader>
                     <form 
                       onSubmit={(e) => {
@@ -416,58 +417,61 @@ export function ProfileContent() {
                     >
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="currentPassword">Current Password</Label>
+                          <Label htmlFor="currentPassword" className="text-sm sm:text-base">Current Password</Label>
                           <Input
                             {...registerPassword("currentPassword")}
                             type="password"
                             placeholder="Enter your current password"
                             disabled={isResettingPassword}
                             className={cn(
+                              "h-9 sm:h-10",
                               passwordErrors.currentPassword && "border-red-500 focus-visible:ring-red-500"
                             )}
                           />
                           {passwordErrors.currentPassword && (
-                            <p className="text-sm text-red-500">
+                            <p className="text-xs sm:text-sm text-red-500">
                               {passwordErrors.currentPassword.message?.toString() || "Invalid password"}
                             </p>
                           )}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="newPassword">New Password</Label>
+                          <Label htmlFor="newPassword" className="text-sm sm:text-base">New Password</Label>
                           <Input
                             {...registerPassword("newPassword")}
                             type="password"
                             placeholder="Enter new password"
                             disabled={isResettingPassword}
                             className={cn(
+                              "h-9 sm:h-10",
                               passwordErrors.newPassword && "border-red-500 focus-visible:ring-red-500"
                             )}
                           />
                           {passwordErrors.newPassword && (
-                            <p className="text-sm text-red-500">
+                            <p className="text-xs sm:text-sm text-red-500">
                               {passwordErrors.newPassword.message?.toString() || "Invalid password"}
                             </p>
                           )}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                          <Label htmlFor="confirmPassword" className="text-sm sm:text-base">Confirm New Password</Label>
                           <Input
                             {...registerPassword("confirmPassword")}
                             type="password"
                             placeholder="Confirm new password"
                             disabled={isResettingPassword}
                             className={cn(
+                              "h-9 sm:h-10",
                               passwordErrors.confirmPassword && "border-red-500 focus-visible:ring-red-500"
                             )}
                           />
                           {passwordErrors.confirmPassword && (
-                            <p className="text-sm text-red-500">
+                            <p className="text-xs sm:text-sm text-red-500">
                               {passwordErrors.confirmPassword.message?.toString() || "Passwords don't match"}
                             </p>
                           )}
                         </div>
                         {passwordError && (
-                          <p className="text-sm text-destructive">{passwordError}</p>
+                          <p className="text-xs sm:text-sm text-destructive">{passwordError}</p>
                         )}
                       </div>
                       
@@ -481,6 +485,7 @@ export function ProfileContent() {
                         <Button
                           type="submit"
                           disabled={isUpdatingPassword || isResettingPassword}
+                          className="h-9 sm:h-10"
                         >
                           {isUpdatingPassword ? (
                             <>
@@ -511,6 +516,7 @@ export function ProfileContent() {
                             variant="outline"
                             onClick={handlePasswordReset}
                             disabled={isResettingPassword}
+                            className="h-9 sm:h-10 w-full"
                           >
                             {isResettingPassword ? (
                               <>
@@ -533,7 +539,7 @@ export function ProfileContent() {
                 <Button 
                   type="submit" 
                   disabled={isSaving || !isFormValid()}
-                  className="min-w-[120px]"
+                  className="h-9 sm:h-10 min-w-[120px] w-full sm:w-auto"
                 >
                   {isSaving ? 'Saving...' : hasFormChanges() ? 'Save Changes' : 'No Changes'}
                 </Button>

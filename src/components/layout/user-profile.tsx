@@ -19,6 +19,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils/utils"
 import { getInitials } from "@/lib/utils/string-utils"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const MAX_DISPLAY_NAME_LENGTH = 20
 const MAX_USERNAME_LENGTH = 25
@@ -62,25 +69,55 @@ export function UserProfile() {
   const initials = getInitials(rawDisplayName)
 
   const handleLogout = async () => {
-    setIsOpen(false) // Close dropdown before signing out
-    await signOut()
-    router.refresh() // Force refresh the page after logout
+    try {
+      setIsOpen(false) // Close dropdown before signing out
+      await signOut()
+      // Instead of refresh, directly navigate to auth page
+      router.push('/auth')
+    } catch (error) {
+      console.error('Error during logout:', error)
+      toast.error('Failed to log out', {
+        description: 'Please try again.'
+      })
+    }
+  }
+
+  const handleNotificationClick = () => {
+    toast.info("Coming Soon!", {
+      description: "Notifications are still under development and will be available soon! 🔔",
+      duration: 4000,
+      position: "top-center",
+      icon: <Bell className="h-5 w-5" />,
+      action: {
+        label: "Dismiss",
+        onClick: () => toast.dismiss()
+      }
+    })
   }
 
   return (
     <div className="relative flex items-center space-x-4">
-      <motion.div
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <Button 
-          variant="ghost" 
-          className="relative h-10 w-10 rounded-full p-0"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5 text-muted-foreground" />
-        </Button>
-      </motion.div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="relative h-10 w-10 rounded-full p-0 hover:bg-muted/50 transition-colors"
+              aria-label="Notifications"
+              onClick={handleNotificationClick}
+            >
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary/10 ring-2 ring-background flex items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-primary/30 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Notifications (Coming Soon)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <motion.div

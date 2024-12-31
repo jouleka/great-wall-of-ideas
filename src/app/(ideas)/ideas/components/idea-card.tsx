@@ -19,6 +19,7 @@ import { VoteIndicator } from "./vote-indicator"
 import { VoteButtons } from "./vote-buttons"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/types/database"
+import DOMPurify from 'isomorphic-dompurify'
 
 interface IdeaCardProps {
   idea: Idea
@@ -26,44 +27,77 @@ interface IdeaCardProps {
   size?: 'default' | 'lg'
 }
 
-// URL formatting function
-function formatTextWithLinks(text: string) {
-  const parts = text.split(/(\bhttps?:\/\/\S+\b)/gi);
+const editorStyles = `
+  .idea-content {
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
   
-  return parts.map((part, i) => {
-    if (part.match(/^https?:\/\//i)) {
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.open(part, '_blank');
-          }}
-        >
-          {part}
-          <svg
-            className="h-3 w-3 inline-block flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-            />
-          </svg>
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
+  .idea-content > * + * {
+    margin-top: 0.75em;
+  }
+
+  .idea-content ul,
+  .idea-content ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .idea-content ul {
+    list-style-type: disc;
+  }
+
+  .idea-content ol {
+    list-style-type: decimal;
+  }
+
+  .idea-content blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+  }
+
+  .idea-content a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .idea-content a:hover {
+    opacity: 0.8;
+  }
+
+  .idea-content p {
+    margin: 0.5rem 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+`
+
+function formatTextWithLinks(html: string) {
+  // Sanitize the HTML first
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  })
+
+  // Return the sanitized HTML wrapped in a div with styles
+  return (
+    <>
+      <style>{editorStyles}</style>
+      <div 
+        className="idea-content"
+        dangerouslySetInnerHTML={{ __html: clean }} 
+      />
+    </>
+  )
 }
 
 const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCardProps) => {
@@ -180,13 +214,16 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground flex items-center">
           <Award className="w-4 h-4 mr-1 text-blue-500" />
-          {idea.company}
+          {idea.target_audience}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-card-foreground line-clamp-3">
+        <div className={cn(
+          "text-sm text-card-foreground break-words",
+          !isDialogOpen && "line-clamp-3"
+        )}>
           {formatTextWithLinks(idea.description)}
-        </p>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center mt-auto pt-4">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -199,10 +236,10 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
               Explore Idea
             </Button>
           </DialogTrigger>
-          <DialogContent className="flex flex-col sm:max-w-[900px] p-0 gap-0 h-screen sm:h-[90vh] w-full max-w-full overflow-hidden">
+          <DialogContent className="flex flex-col sm:max-w-[900px] p-0 gap-0 h-[95vh] sm:h-[90vh] w-full max-w-full overflow-hidden">
             {/* Mobile View */}
-            <div className="block sm:hidden h-full flex-col">
-              {/* Fixed Header */}
+            <div className="block sm:hidden h-full flex flex-col">
+              {/* Fixed Header - Sticky */}
               <div className="p-4 border-b bg-background/95 sticky top-0 z-10">
                 <DialogHeader>
                   <div className="flex items-center justify-between">
@@ -224,28 +261,28 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                   </div>
                   <DialogDescription className="flex items-center gap-2 mt-2 text-sm">
                     <Award className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                    {idea.company}
+                    {idea.target_audience}
                   </DialogDescription>
                 </DialogHeader>
               </div>
 
-              {/* Update ScrollArea wrapper */}
+              {/* Main Scrollable Content */}
               <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-[calc(100vh-8rem)]">
                   <div className="p-4">
                     <div className="space-y-4">
                       {/* Description Section */}
                       <div className="prose prose-sm dark:prose-invert max-w-full">
                         <div className="relative">
-                          <p 
+                          <div 
                             className={cn(
-                              "text-card-foreground leading-relaxed break-words",
+                              "text-card-foreground leading-relaxed break-words whitespace-pre-wrap",
                               !isDescriptionExpanded && "line-clamp-4"
                             )}
                             onClick={(e) => e.stopPropagation()}
                           >
                             {formatTextWithLinks(idea.description)}
-                          </p>
+                          </div>
                           {idea.description.length > 300 && (
                             <Button
                               variant="link"
@@ -274,22 +311,22 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                           <User className="w-4 h-4 mr-2 flex-shrink-0" />
                           <span className="truncate">{idea.author_name}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center">
-                        <VoteButtons 
-                          currentVote={currentVote}
-                          upvotes={idea.upvotes}
-                          downvotes={idea.downvotes}
-                          onUpvote={() => handleVote("upvote")}
-                          onDownvote={() => handleVote("downvote")}
-                          size={size === 'lg' ? 'lg' : 'default'}
-                        />
+                        <div className="flex items-center">
+                          <VoteButtons 
+                            currentVote={currentVote}
+                            upvotes={idea.upvotes}
+                            downvotes={idea.downvotes}
+                            onUpvote={() => handleVote("upvote")}
+                            onDownvote={() => handleVote("downvote")}
+                            size={size === 'lg' ? 'lg' : 'default'}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Comments Section */}
-                  <div className="border-t pb-20">
+                  <div className="border-t">
                     <CommentSection ideaId={idea.id} />
                   </div>
                 </ScrollArea>
@@ -314,7 +351,7 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                     </div>
                     <DialogDescription className="flex items-center gap-2 mt-2">
                       <Award className="w-4 h-4 text-blue-500" />
-                      {idea.company}
+                      {idea.target_audience}
                     </DialogDescription>
                   </DialogHeader>
                 </div>
@@ -326,15 +363,15 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                       {/* Description Section */}
                       <div className="prose prose-sm dark:prose-invert max-w-full">
                         <div className="relative">
-                          <p className="text-card-foreground leading-relaxed break-words">
+                          <div className="text-card-foreground leading-relaxed break-words">
                             {idea.description.length > 300 ? (
                               <>
-                                <span className={cn(
+                                <div className={cn(
                                   "block transition-all duration-300 whitespace-pre-wrap break-words",
                                   !isDescriptionExpanded && "line-clamp-6"
                                 )}>
                                   {formatTextWithLinks(idea.description)}
-                                </span>
+                                </div>
                                 <Button
                                   variant="link"
                                   className="px-0 h-auto font-medium text-primary mt-2"
@@ -344,11 +381,11 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                                 </Button>
                               </>
                             ) : (
-                              <span className="whitespace-pre-wrap break-words">
+                              <div className="whitespace-pre-wrap break-words">
                                 {formatTextWithLinks(idea.description)}
-                              </span>
+                              </div>
                             )}
-                          </p>
+                          </div>
                         </div>
                       </div>
 

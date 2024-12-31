@@ -25,8 +25,14 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
-    // OAuth callback
-    if (pathname === '/api/auth/callback-route') {
+    // Public API routes
+    if (pathname.match(/^\/api\/ideas\/[^/]+\/comments$/)) {
+      return res;
+    }
+
+    // OAuth callback and reset password routes
+    if (pathname === '/auth/callback' || 
+        pathname.startsWith('/auth/reset-password')) {
       return res;
     }
 
@@ -40,24 +46,27 @@ export async function middleware(req: NextRequest) {
       );
     }
 
-    // Public auth routes
-    if (pathname.startsWith('/auth/reset-password')) {
+    // Redirect from auth pages if logged in
+    if (pathname.startsWith('/auth')) {
+      if (session) {
+        return NextResponse.redirect(new URL('/ideas', req.url));
+      }
       return res;
     }
 
-    // Redirect from auth pages if logged in
-    if (pathname.startsWith('/auth') && session) {
-      const redirectUrl = new URL('/ideas', req.url);
+    // For all other routes, check session
+    if (!session) {
+      // Store the original URL as a search param
+      const redirectUrl = new URL('/auth', req.url);
+      redirectUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
     return res;
   } catch (error) {
     console.error('Middleware error:', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    );
+    // On error, redirect to auth page
+    return NextResponse.redirect(new URL('/auth', req.url));
   }
 }
 

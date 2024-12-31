@@ -51,7 +51,21 @@ export const ideaService = {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      // Enhance error messages for better user feedback
+      if (error.message.includes('target_audience_length')) {
+        throw new Error('Target audience must be between 2 and 50 characters')
+      } else if (error.message.includes('category_length')) {
+        throw new Error('Category must be between 2 and 30 characters')
+      } else if (error.message.includes('tags_length')) {
+        throw new Error('Maximum 8 tags allowed, each tag must be between 2 and 15 characters')
+      } else if (error.message.includes('description_length')) {
+        throw new Error('Description must be less than 2000 characters')
+      } else if (error.message.includes('title_length')) {
+        throw new Error('Title must be between 3 and 100 characters')
+      }
+      throw error
+    }
     return data
   },
 
