@@ -5,6 +5,9 @@ import { getBaseUrl } from '@/lib/utils/get-base-url'
 
 export async function signUp(email: string, password: string, name: string) {
   try {
+    // Get the site URL from environment variable, with a fallback
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -13,7 +16,7 @@ export async function signUp(email: string, password: string, name: string) {
           username: name,
           full_name: name
         },
-        emailRedirectTo: `${getBaseUrl()}/auth/callback`
+        emailRedirectTo: `${siteUrl}/auth/callback?type=signup`
       },
     })
 
@@ -128,5 +131,27 @@ export async function signInWithGoogle() {
       description: error instanceof Error ? error.message : "Please try again later."
     })
     return { data: null, error }
+  }
+}
+
+export async function sendPasswordResetEmail({ email, redirectTo }: { email: string, redirectTo?: string }) {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectTo || `${siteUrl}/auth/callback?type=recovery`
+    })
+
+    if (error) throw error
+
+    toast.success("Password reset link sent!", {
+      description: "Check your email for the reset link."
+    })
+    return { success: true }
+  } catch (err) {
+    console.error('Error sending reset email:', err)
+    toast.error("Failed to send reset email", {
+      description: "Please try again later."
+    })
+    return { success: false, error: err }
   }
 } 

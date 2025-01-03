@@ -2,11 +2,12 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const type = requestUrl.searchParams.get('type')
   const next = requestUrl.searchParams.get('next') || '/ideas'
 
   if (code) {
@@ -16,13 +17,22 @@ export async function GET(request: Request) {
     try {
       // Exchange the code for a session
       await supabase.auth.exchangeCodeForSession(code)
+
+      // Handle different verification types
+      if (type === 'recovery') {
+        // For password reset, redirect to reset password page
+        return NextResponse.redirect(`${siteUrl}/auth/reset-password?verified=true`)
+      } else if (type === 'signup') {
+        // For signup verification, redirect to auth with success message
+        return NextResponse.redirect(`${siteUrl}/auth?verified=true`)
+      }
     } catch (error) {
       console.error('Auth callback error:', error)
       // Redirect to auth page with error
-      return NextResponse.redirect(`${SITE_URL}/auth?error=AuthCallbackError`)
+      return NextResponse.redirect(`${siteUrl}/auth?error=AuthCallbackError`)
     }
   }
 
-  // Redirect to the next page or default to /ideas
-  return NextResponse.redirect(`${SITE_URL}${next}`)
+  // Default redirect to the next page
+  return NextResponse.redirect(`${siteUrl}${next}`)
 } 

@@ -108,11 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return
     try {
       await authService.signOut()
-      
-      // Clear local state
       setUser(null)
       
-      // Clear any stored tokens and session data
       if (typeof window !== 'undefined') {
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('sb-') || 
@@ -124,10 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       }
 
-      // Force a hard reload of all data
       router.refresh()
-      
-      // Navigate to auth page
       router.push('/auth')
     } catch (error) {
       console.error('Error clearing auth state:', error)
@@ -152,25 +146,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(async (email: string, password: string, username: string) => {
     if (!mounted) return { user: null, error: new Error('Component not mounted') }
     try {
-      return await authService.signUp(email, password, username)
+      const result = await authService.signUp(email, password, username)
+      
+      if (result.user) {
+        router.push(`/auth?message=CheckEmail`)
+      }
+      
+      return result
     } catch (error) {
       console.error('Error in signUp:', error)
       return { user: null, error: error instanceof Error ? error : new Error('An unknown error occurred') }
     }
-  }, [mounted])
+  }, [mounted, router])
 
   const signInWithGoogle = useCallback(async () => {
     if (!mounted) return
     try {
       const { error } = await authService.signInWithGoogle()
       if (error) throw error
-      
-      // Redirect is handled by OAuth callback
     } catch (error) {
       throw error
     }
   }, [mounted])
 
+  // Memoize the context value with all dependencies
   const value = useMemo(() => ({
     user,
     loading,
