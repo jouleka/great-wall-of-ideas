@@ -10,29 +10,35 @@ export async function GET(request: Request) {
   const type = requestUrl.searchParams.get('type')
   const next = requestUrl.searchParams.get('next') || '/ideas'
 
-  if (code) {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    
-    try {
-      // Exchange the code for a session
-      await supabase.auth.exchangeCodeForSession(code)
-
-      // Handle different verification types
-      if (type === 'recovery') {
-        // For password reset, redirect to reset password page in auth group
-        return NextResponse.redirect(`${siteUrl}/auth/reset-password?verified=true`)
-      } else if (type === 'signup') {
-        // For signup verification, redirect to auth with success message
-        return NextResponse.redirect(`${siteUrl}/auth?verified=true`)
-      }
-    } catch (error) {
-      console.error('Auth callback error:', error)
-      // Redirect to auth page with error
-      return NextResponse.redirect(`${siteUrl}/auth?error=AuthCallbackError`)
-    }
+  if (!code) {
+    return NextResponse.redirect(`${siteUrl}/auth?error=MissingCode`)
   }
 
-  // Default redirect to the next page
-  return NextResponse.redirect(`${siteUrl}${next}`)
+  const cookieStore = cookies()
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  
+  try {
+    // Exchange the code for a session
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (error) {
+      console.error('Auth code exchange error:', error)
+      return NextResponse.redirect(`${siteUrl}/auth?error=InvalidCode`)
+    }
+
+    // Handle different verification types
+    if (type === 'recovery') {
+      // For password reset, redirect to reset password page in auth group
+      return NextResponse.redirect(`${siteUrl}/auth/reset-password?verified=true`)
+    } else if (type === 'signup') {
+      // For signup verification, redirect to auth with success message
+      return NextResponse.redirect(`${siteUrl}/auth?verified=true`)
+    }
+
+    // Default redirect to the next page
+    return NextResponse.redirect(`${siteUrl}${next}`)
+  } catch (error) {
+    console.error('Auth callback error:', error)
+    return NextResponse.redirect(`${siteUrl}/auth?error=AuthCallbackError`)
+  }
 } 

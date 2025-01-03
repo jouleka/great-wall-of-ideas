@@ -30,9 +30,8 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
-    // OAuth callback and reset password routes
-    if (pathname === '/auth/callback' || 
-        pathname.startsWith('/auth/reset-password')) {
+    // OAuth callback route - always allow
+    if (pathname === '/auth/callback') {
       return res;
     }
 
@@ -46,9 +45,23 @@ export async function middleware(req: NextRequest) {
       );
     }
 
-    // Redirect from auth pages if logged in
+    // Handle auth pages
     if (pathname.startsWith('/auth')) {
-      if (session) {
+      // Special handling for reset password page
+      if (pathname === '/auth/reset-password') {
+        const verified = new URL(req.url).searchParams.get('verified')
+        
+        // Allow access if verified parameter is present
+        if (verified === 'true') {
+          return res;
+        }
+        
+        // Otherwise redirect to auth
+        return NextResponse.redirect(new URL('/auth', req.url))
+      }
+      
+      // Redirect other auth pages if logged in
+      if (session && !pathname.includes('reset-password')) {
         return NextResponse.redirect(new URL('/ideas', req.url));
       }
       return res;

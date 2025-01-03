@@ -12,36 +12,67 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/lib/utils/utils'
 import { passwordConfirmationSchema, PASSWORD_REQUIREMENTS, type PasswordConfirmationInputs } from '@/lib/utils/validation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function ResetPassword() {
   const [isResetting, setIsResetting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const supabase = createClientComponentClient()
+  
   const isVerified = searchParams.get('verified') === 'true'
+  
   const { register, handleSubmit, formState: { errors } } = useForm<PasswordConfirmationInputs>({
     resolver: zodResolver(passwordConfirmationSchema)
   })
 
   useEffect(() => {
-    // Redirect if not verified through recovery flow
-    if (!isVerified) {
-      router.push('/auth')
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        // If no session or not verified through recovery flow, redirect
+        if (!session || !isVerified) {
+          router.push('/auth')
+          return
+        }
+        
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Session check error:', error)
+        router.push('/auth')
+      }
     }
-  }, [isVerified, router])
+
+    checkSession()
+  }, [isVerified, router, supabase.auth])
 
   const onSubmit = async (data: PasswordConfirmationInputs) => {
     setIsResetting(true)
 
-    const { success } = await authService.updatePassword({
-      newPassword: data.newPassword,
-      confirmPassword: data.confirmPassword
-    })
+    try {
+      const { success } = await authService.updatePassword({
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword
+      })
 
-    if (success) {
-      router.push('/auth')
+      if (success) {
+        router.push('/auth?message=PasswordUpdated')
+      }
+    } catch (error) {
+      console.error('Password reset error:', error)
+    } finally {
+      setIsResetting(false)
     }
-    
-    setIsResetting(false)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (

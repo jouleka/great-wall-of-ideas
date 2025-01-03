@@ -51,11 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isSubscribed) {
           setUser(session?.user ?? null)
           setLoading(false)
-          
-          // If we have a session and we're on the auth page, redirect to ideas
-          if (session?.user && window.location.pathname.includes('/auth')) {
-            router.push('/ideas')
-          }
         }
       } catch (error) {
         console.error('Error checking user:', error)
@@ -77,8 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case 'SIGNED_IN':
           if (session?.user) {
             setUser(session.user)
-            // Immediate redirect on sign in
-            router.push('/ideas')
+            // Let the signIn function handle the redirect
           }
           setLoading(false)
           break
@@ -102,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isSubscribed = false
       subscription.unsubscribe()
     }
-  }, [supabase, mounted, router])
+  }, [supabase, mounted])
 
   const signOut = useCallback(async () => {
     if (!mounted) return
@@ -135,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password)
       if (error) throw error
       
-      // Immediately redirect after successful login
+      // Handle redirect after successful login
       router.push('/ideas')
       router.refresh()
     } catch (error) {

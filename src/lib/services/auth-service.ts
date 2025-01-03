@@ -18,10 +18,12 @@ interface UpdatePasswordOptions {
 export const authService = {
   // Send password reset email without checking email existence
   // Supabase already handles this check internally
-  async sendPasswordResetEmail({ email, redirectTo }: PasswordResetOptions) {
+  async sendPasswordResetEmail({ email }: PasswordResetOptions) {
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo || `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${siteUrl}/auth/callback?type=recovery`
       })
 
       if (error) throw error
