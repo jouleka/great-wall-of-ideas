@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
       // Handle different verification types
       if (type === 'recovery') {
-        // For password reset, redirect to reset password page
+        // For password reset, redirect to reset password page in auth group
         return NextResponse.redirect(`${siteUrl}/auth/reset-password?verified=true`)
       } else if (type === 'signup') {
         // For signup verification, redirect to auth with success message
