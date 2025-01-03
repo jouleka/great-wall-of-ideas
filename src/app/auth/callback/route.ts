@@ -1,5 +1,5 @@
-import { cookies } from 'next/dist/client/components/headers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -23,5 +23,6 @@ export async function GET(request: Request) {
     }
   }
 
+  // Redirect to the next page or default to /ideas
   return NextResponse.redirect(`${SITE_URL}${next}`)
 } 

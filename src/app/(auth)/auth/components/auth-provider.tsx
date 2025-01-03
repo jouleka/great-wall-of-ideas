@@ -2,16 +2,15 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { createClientComponentClient, User } from '@supabase/auth-helpers-nextjs'
-import { authService } from '@/lib/services/auth-service'
 import { Loading } from "@/components/ui/loading"
-import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
+import * as authService from '@/lib/services/auth'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (emailOrUsername: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, username: string) => Promise<{ user: User | null; error: Error | null }>
+  signUp: (email: string, password: string, username: string) => Promise<{ user: User | null; error: unknown | null }>
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
 }
@@ -24,49 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const supabase = createClientComponentClient()
   const router = useRouter()
-
-  // Function to clear auth state
-  const clearAuthState = useCallback(async () => {
-    try {
-      setLoading(true)
-      
-      // First sign out from Supabase
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      
-      // Then clear local state
-      setUser(null)
-      
-      // Clear any stored tokens and session data
-      if (typeof window !== 'undefined') {
-        // Clear all Supabase-related items from localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || 
-              key.startsWith('supabase.') || 
-              key.includes('token') || 
-              key.includes('session')) {
-            localStorage.removeItem(key)
-          }
-        })
-      }
-
-      // Force a hard reload of all data
-      router.refresh()
-      
-      // Navigate to auth page
-      router.push('/auth')
-
-      toast.success('Logged out successfully')
-    } catch (error) {
-      console.error('Error clearing auth state:', error)
-      toast.error('Error during logout', {
-        description: 'Some session data may not have been cleared properly.'
-      })
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase, router])
 
   // Handle mounting state
   useEffect(() => {
@@ -83,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (error || !session) {
+        if (error) {
           console.error('Error checking session:', error)
           if (isSubscribed) {
             setUser(null)
@@ -93,8 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         if (isSubscribed) {
-          setUser(session.user)
+          setUser(session?.user ?? null)
           setLoading(false)
+          
+          // If we have a session and we're on the auth page, redirect to ideas
+          if (session?.user && window.location.pathname.includes('/auth')) {
+            router.push('/ideas')
+          }
         }
       } catch (error) {
         console.error('Error checking user:', error)
@@ -106,8 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, !!session)
-      
       if (!isSubscribed) return
 
       switch (event) {
@@ -118,6 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case 'SIGNED_IN':
           if (session?.user) {
             setUser(session.user)
+            // Immediate redirect on sign in
+            router.push('/ideas')
           }
           setLoading(false)
           break
@@ -130,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           break
         default:
-          // For any other event, just update the loading state
           setLoading(false)
           break
       }
@@ -142,62 +102,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isSubscribed = false
       subscription.unsubscribe()
     }
-  }, [supabase, mounted])
+  }, [supabase, mounted, router])
 
   const signOut = useCallback(async () => {
     if (!mounted) return
-    await clearAuthState()
-  }, [clearAuthState, mounted])
+    try {
+      await authService.signOut()
+      
+      // Clear local state
+      setUser(null)
+      
+      // Clear any stored tokens and session data
+      if (typeof window !== 'undefined') {
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || 
+              key.startsWith('supabase.') || 
+              key.includes('token') || 
+              key.includes('session')) {
+            localStorage.removeItem(key)
+          }
+        })
+      }
+
+      // Force a hard reload of all data
+      router.refresh()
+      
+      // Navigate to auth page
+      router.push('/auth')
+    } catch (error) {
+      console.error('Error clearing auth state:', error)
+      throw error
+    }
+  }, [mounted, router])
 
   const signIn = useCallback(async (emailOrUsername: string, password: string) => {
     if (!mounted) return
     try {
       const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password)
       if (error) throw error
+      
+      // Immediately redirect after successful login
+      router.push('/ideas')
+      router.refresh()
     } catch (error) {
       throw error
     }
-  }, [mounted])
+  }, [mounted, router])
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
     if (!mounted) return { user: null, error: new Error('Component not mounted') }
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-            full_name: username,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) throw error
-
-      return { user: data.user, error: null }
+      return await authService.signUp(email, password, username)
     } catch (error) {
       console.error('Error in signUp:', error)
       return { user: null, error: error instanceof Error ? error : new Error('An unknown error occurred') }
     }
-  }, [supabase, mounted])
+  }, [mounted])
 
   const signInWithGoogle = useCallback(async () => {
     if (!mounted) return
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/ideas`,
-        },
-      })
+      const { error } = await authService.signInWithGoogle()
       if (error) throw error
+      
+      // Redirect is handled by OAuth callback
     } catch (error) {
-      console.error('Error signing in with Google:', error)
       throw error
     }
-  }, [supabase, mounted])
+  }, [mounted])
 
   const value = useMemo(() => ({
     user,

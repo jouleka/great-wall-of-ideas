@@ -4,23 +4,23 @@ import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
   try {
-    // Initialize response first
     const res = NextResponse.next();
-    
-    // Initialize Supabase client
     const supabase = createMiddlewareClient({ req, res });
-    const { data: { session } } = await supabase.auth.getSession();
-
+    
+    // Quick check for static routes
     const { pathname } = req.nextUrl;
-
-    // Static and public routes - return early
     if (pathname.startsWith('/_next') || 
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public')) {
       return res;
     }
 
-    // Public routes
+    // Get session without waiting if possible
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    // Public routes - return early
     if (pathname.startsWith('/ideas') && !pathname.includes('/api')) {
       return res;
     }
@@ -56,7 +56,6 @@ export async function middleware(req: NextRequest) {
 
     // For all other routes, check session
     if (!session) {
-      // Store the original URL as a search param
       const redirectUrl = new URL('/auth', req.url);
       redirectUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(redirectUrl);
@@ -65,7 +64,6 @@ export async function middleware(req: NextRequest) {
     return res;
   } catch (error) {
     console.error('Middleware error:', error);
-    // On error, redirect to auth page
     return NextResponse.redirect(new URL('/auth', req.url));
   }
 }

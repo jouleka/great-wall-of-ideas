@@ -249,37 +249,31 @@ export function ProfileContent() {
   }
 
   const onPasswordSubmit: SubmitHandler<PasswordChangeInputs> = async (data) => {
-    const handlePasswordFormSubmit = (e: React.FormEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      
-      if (!user?.email) return
-      
-      // Don't proceed if any required field is empty
-      if (!data.currentPassword || !data.newPassword || !data.confirmPassword) {
-        setPasswordError("All password fields are required")
-        return
-      }
-      
-      setIsUpdatingPassword(true)
-      setIsResettingPassword(false)
-      setPasswordError(null)
+    if (!user?.email) return
+    
+    setIsUpdatingPassword(true)
+    setIsResettingPassword(false)
+    setPasswordError(null)
 
-      authService.updatePassword({
+    try {
+      const { success, error } = await authService.updatePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword
-      }).then(({ success, error }) => {
-        if (success) {
-          setIsPasswordDialogOpen(false)
-        } else if (error) {
-          setPasswordError(error instanceof Error ? error.message : "Failed to update password")
-        }
-        setIsUpdatingPassword(false)
       })
-    }
 
-    handlePasswordFormSubmit(data as unknown as React.FormEvent)
+      if (success) {
+        setIsPasswordDialogOpen(false)
+        toast.success('Password updated successfully')
+      } else if (error) {
+        setPasswordError(error instanceof Error ? error.message : "Failed to update password")
+      }
+    } catch (error) {
+      console.error('Error updating password:', error)
+      setPasswordError('An unexpected error occurred')
+    } finally {
+      setIsUpdatingPassword(false)
+    }
   }
 
   if (isLoading) {
@@ -408,11 +402,7 @@ export function ProfileContent() {
                       <DialogTitle className="text-lg sm:text-xl">Change Password</DialogTitle>
                     </DialogHeader>
                     <form 
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handlePasswordSubmit(onPasswordSubmit)()
-                      }} 
+                      onSubmit={handlePasswordSubmit(onPasswordSubmit)} 
                       className="space-y-4 py-4"
                     >
                       <div className="space-y-4">
