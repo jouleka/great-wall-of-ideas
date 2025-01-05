@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings, LogIn, Bell } from "lucide-react"
+import { User, LogOut, LogIn, Bell } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 import { motion } from "framer-motion"
@@ -95,6 +95,19 @@ export function UserProfile() {
     })
   }
 
+  // const handleSettingsClick = () => {
+  //   toast.info("Coming Soon!", {
+  //     description: "Settings panel is under development and will be available soon! ⚙️",
+  //     duration: 4000,
+  //     position: "top-center",
+  //     icon: <Settings className="h-5 w-5" />,
+  //     action: {
+  //       label: "Dismiss",
+  //       onClick: () => toast.dismiss()
+  //     }
+  //   })
+  // }
+
   return (
     <div className="relative flex items-center space-x-4">
       <TooltipProvider>
@@ -139,7 +152,7 @@ export function UserProfile() {
                 />
                 <AvatarFallback delayMs={600}>{initials}</AvatarFallback>
               </Avatar>
-              <span className="font-medium text-sm truncate">
+              <span className="hidden sm:inline-block font-medium text-sm truncate">
                 {displayName}
               </span>
             </Button>
@@ -170,10 +183,10 @@ export function UserProfile() {
               <span className="font-medium">Profile</span>
             </DropdownMenuItem>
           </Link>
-          <DropdownMenuItem className="p-3 cursor-pointer">
+          {/* <DropdownMenuItem className="p-3 cursor-pointer" onClick={handleSettingsClick}>
             <Settings className="mr-3 h-5 w-5 shrink-0" />
             <span className="font-medium">Settings</span>
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             className="p-3 cursor-pointer text-red-500 focus:text-red-500" 

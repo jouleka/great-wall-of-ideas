@@ -121,11 +121,11 @@ export default function GreatWallOfIdeas() {
         backgroundColor: "hsl(var(--background))",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header - always single row */}
         <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground truncate">
-            The Great Wall of Ideas
+            Great Wall of Ideas
           </h1>
           <div className="flex-shrink-0">
             <UserProfile />
