@@ -20,6 +20,7 @@ import { VoteButtons } from "./vote-buttons"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/types/database"
 import DOMPurify from 'isomorphic-dompurify'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface IdeaCardProps {
   idea: Idea
@@ -109,6 +110,7 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
   const ideaBadge = useIdeaBadge(idea.status)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isTitleExpanded, setIsTitleExpanded] = useState(false)
 
   const supabase = createClientComponentClient<Database>()
 
@@ -238,19 +240,30 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
           </DialogTrigger>
           <DialogContent className="flex flex-col sm:max-w-[900px] p-0 gap-0 h-[95vh] sm:h-[90vh] w-full max-w-full overflow-hidden">
             {/* Mobile View */}
-            <div className="block sm:hidden h-full flex flex-col">
+            <div className="sm:hidden h-full flex flex-col">
               {/* Fixed Header - Sticky */}
-              <div className="p-4 border-b bg-background/95 sticky top-0 z-10">
+              <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
                 <DialogHeader>
                   <div className="flex items-center justify-between">
                     <DialogTitle className="flex items-center gap-2 max-w-[80%]">
-                      <IconComponent className="w-5 h-5 text-primary flex-shrink-0" />
-                      <span className="line-clamp-1 text-base">{idea.title}</span>
+                      <div 
+                        className="cursor-pointer text-left" 
+                        onClick={() => setIsTitleExpanded(!isTitleExpanded)}
+                      >
+                        <span className={cn(
+                          "text-base text-left transition-all duration-200",
+                          isTitleExpanded ? "" : "line-clamp-2"
+                        )}>
+                          {idea.title}
+                        </span>
+                      </div>
                     </DialogTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800 text-xs`}>
-                        {ideaBadge?.text}
-                      </Badge>
+                      {ideaBadge && (
+                        <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800 text-xs`}>
+                          {ideaBadge?.text}
+                        </Badge>
+                      )}
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <X className="h-4 w-4" />
@@ -338,12 +351,22 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
               {/* Left Panel - Idea Details */}
               <div className="col-span-3 flex flex-col h-full overflow-hidden">
                 {/* Fixed Header */}
-                <div className="p-6 border-b bg-background/95 sticky top-0 z-10">
+                <div className="p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
                   <DialogHeader>
                     <div className="flex items-center justify-between">
-                      <DialogTitle className="flex items-center gap-2 text-2xl">
-                        <IconComponent className="w-6 h-6 text-primary" />
-                        {idea.title}
+                      <DialogTitle className="flex items-center gap-2 max-w-[80%]">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="line-clamp-2 text-2xl cursor-default">
+                                {idea.title}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" align="start" className="max-w-[400px]">
+                              <p className="font-normal">{idea.title}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </DialogTitle>
                       <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
                         {ideaBadge?.text}
