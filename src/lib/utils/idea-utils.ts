@@ -25,7 +25,7 @@ const categoryIcons: Record<string, LucideIcon> = {
 
 // Status to badge mapping
 const statusBadges: Record<string, { text: string; variant: string }> = {
-  pending: { text: "Under Review", variant: "yellow" },
+  pending: { text: "Published", variant: "yellow" },
   approved: { text: "Approved", variant: "green" },
   rejected: { text: "Not Planned", variant: "red" },
   implemented: { text: "Shipped", variant: "blue" },

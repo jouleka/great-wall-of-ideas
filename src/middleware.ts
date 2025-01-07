@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
     } = await supabase.auth.getSession();
 
     // Public routes - return early
-    if (pathname.startsWith('/ideas') && !pathname.includes('/api')) {
+    if (pathname === '/' || pathname.startsWith('/ideas') && !pathname.includes('/api')) {
       return res;
     }
 
