@@ -70,7 +70,10 @@ export function useIdeas() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        toast.error("Please sign in to vote")
+        toast.error("Please sign in to vote", {
+          className: "dark:bg-zinc-800 dark:text-zinc-200",
+          descriptionClassName: "dark:text-zinc-400"
+        })
         return
       }
 
@@ -95,7 +98,10 @@ export function useIdeas() {
 
       if (!result.success) {
         setIdeas(ideaStateBeforeVote)
-        toast.error(result.message)
+        toast.error(result.message, {
+          className: "dark:bg-zinc-800 dark:text-zinc-200",
+          descriptionClassName: "dark:text-zinc-400"
+        })
         return
       }
 
@@ -119,7 +125,10 @@ export function useIdeas() {
 
     } catch (error) {
       console.error('Error voting:', error)
-      toast.error("Failed to register vote")
+      toast.error("Failed to register vote", {
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
+      })
       setIdeas(ideaStateBeforeVote)
     }
   }, [supabase, ideas, resetAndLoad, sortType])
@@ -128,7 +137,10 @@ export function useIdeas() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        toast.error("Please sign in to create an idea")
+        toast.error("Please sign in to create an idea", {
+          className: "dark:bg-zinc-800 dark:text-zinc-200",
+          descriptionClassName: "dark:text-zinc-400"
+        })
         return
       }
 
@@ -147,7 +159,10 @@ export function useIdeas() {
       resetAndLoad()
     } catch (error) {
       console.error('Error creating idea:', error)
-      toast.error("Failed to create idea")
+      toast.error("Failed to create idea", {
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
+      })
     }
   }, [supabase, resetAndLoad])
 

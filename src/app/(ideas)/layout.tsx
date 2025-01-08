@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Navbar } from "@/components/layout/navbar";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -8,18 +9,21 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Great Wall of Ideas - Authentication",
-  description: "Sign in or create an account for Great Wall of Ideas",
+  title: "Great Wall of Ideas",
+  description: "A platform for sharing and exploring innovative ideas",
 };
 
-export default function AuthLayout({
+export default function IdeasLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      {children}
+      <Navbar />
+      <main className="flex-1">
+        {children}
+      </main>
     </div>
   );
 } 

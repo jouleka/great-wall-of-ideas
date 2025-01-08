@@ -257,7 +257,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   id="emailOrUsername"
                   placeholder="Type your email or username"
                   className={cn(
-                    "bg-white/50",
+                    "bg-background",
                     loginErrors.emailOrUsername && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -273,7 +273,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   type="password"
                   placeholder="Enter your password"
                   className={cn(
-                    "bg-white/50",
+                    "bg-background",
                     loginErrors.password && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -283,7 +283,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
               </div>
               <Button
                 type="submit"
-                className="w-full text-white"
+                className="w-full"
                 disabled={isEmailLoading}
               >
                 {isEmailLoading ? (
@@ -314,7 +314,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   id="username"
                   placeholder="Choose a username"
                   className={cn(
-                    "bg-white/50",
+                    "bg-background",
                     errors.username && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -331,7 +331,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   type="email"
                   placeholder="Enter your email"
                   className={cn(
-                    "bg-white/50",
+                    "bg-background",
                     errors.email && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -348,7 +348,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   type="password"
                   placeholder="Create a password"
                   className={cn(
-                    "bg-white/50",
+                    "bg-background",
                     errors.password && "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
@@ -365,7 +365,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
               <Button
                 type="submit"
-                className="w-full text-white"
+                className="w-full"
                 disabled={isEmailLoading}
               >
                 {isEmailLoading ? (
@@ -395,7 +395,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
         <Button
           variant="outline"
-          className="w-full bg-white hover:bg-gray-100"
+          className="w-full bg-background hover:bg-muted"
           onClick={handleGoogleAuth}
           disabled={isGoogleLoading || isEmailLoading || isAppleLoading}
         >
@@ -464,7 +464,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
         <Button
           variant="ghost"
-          className="w-full"
+          className="w-full hover:bg-muted"
           onClick={handleContinueAsGuest}
           disabled={isEmailLoading || isGoogleLoading || isAppleLoading}
         >

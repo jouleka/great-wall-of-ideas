@@ -11,7 +11,6 @@ import dynamic from 'next/dynamic'
 import { useIdeas } from "@/hooks/use-ideas"
 import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
-import { UserProfile } from "@/components/layout/user-profile"
 
 // Dynamically import heavy components
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { 
@@ -122,16 +121,6 @@ export default function GreatWallOfIdeas() {
       }}
     >
       <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Header - always single row */}
-        <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground truncate">
-            Great Wall of Ideas
-          </h1>
-          <div className="flex-shrink-0">
-            <UserProfile />
-          </div>
-        </div>
-        
         {/* Improved search and create layout - always single row */}
         <div className="mb-6 sm:mb-8">
           <Label htmlFor="search" className="text-base lg:text-lg font-semibold block mb-2">

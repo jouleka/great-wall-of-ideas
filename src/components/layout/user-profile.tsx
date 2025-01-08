@@ -77,7 +77,9 @@ export function UserProfile() {
     } catch (error) {
       console.error('Error during logout:', error)
       toast.error('Failed to log out', {
-        description: 'Please try again.'
+        description: 'Please try again.',
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
       })
     }
   }
@@ -87,6 +89,8 @@ export function UserProfile() {
       description: "Notifications are still under development and will be available soon! 🔔",
       duration: 4000,
       position: "top-center",
+      className: "dark:bg-zinc-800 dark:text-zinc-200",
+      descriptionClassName: "dark:text-zinc-400",
       icon: <Bell className="h-5 w-5" />,
       action: {
         label: "Dismiss",
@@ -100,6 +104,8 @@ export function UserProfile() {
   //     description: "Settings panel is under development and will be available soon! ⚙️",
   //     duration: 4000,
   //     position: "top-center",
+  //     className: "dark:bg-zinc-800 dark:text-zinc-200",
+  //     descriptionClassName: "dark:text-zinc-400",
   //     icon: <Settings className="h-5 w-5" />,
   //     action: {
   //       label: "Dismiss",

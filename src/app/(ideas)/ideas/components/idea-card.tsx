@@ -156,7 +156,9 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
         action: {
           label: "Sign In",
           onClick: () => router.push('/auth?redirectTo=/ideas')
-        }
+        },
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
       })
       return
     }
