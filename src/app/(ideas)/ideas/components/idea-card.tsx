@@ -21,11 +21,14 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/types/database"
 import DOMPurify from 'isomorphic-dompurify'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ShareButton } from "./share-button"
 
 interface IdeaCardProps {
   idea: Idea
   onVote: (ideaId: string, voteType: "upvote" | "downvote") => Promise<void>
   size?: 'default' | 'lg'
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const editorStyles = `
@@ -101,7 +104,13 @@ function formatTextWithLinks(html: string) {
   )
 }
 
-const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCardProps) => {
+const IdeaCard = memo(({ 
+  idea: initialIdea, 
+  onVote, 
+  size = 'default',
+  isOpen,
+  onOpenChange 
+}: IdeaCardProps) => {
   const { user } = useAuth()
   const router = useRouter()
   const [currentVote, setCurrentVote] = useState<'upvote' | 'downvote' | null>(null)
@@ -113,6 +122,18 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
   const [isTitleExpanded, setIsTitleExpanded] = useState(false)
 
   const supabase = createClientComponentClient<Database>()
+
+  // Sync controlled state
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setIsDialogOpen(isOpen)
+    }
+  }, [isOpen])
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDialogOpen(open)
+    onOpenChange?.(open)
+  }
 
   const handleExploreClick = useCallback(async () => {
     try {
@@ -230,7 +251,7 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center mt-auto pt-4">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button 
               variant="outline"
@@ -326,7 +347,12 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                           <User className="w-4 h-4 mr-2 flex-shrink-0" />
                           <span className="truncate">{idea.author_name}</span>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <ShareButton 
+                            ideaId={idea.id}
+                            title={idea.title}
+                            size={size === 'lg' ? 'lg' : 'default'}
+                          />
                           <VoteButtons 
                             currentVote={currentVote}
                             upvotes={idea.upvotes}
@@ -429,7 +455,12 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
                             <span className="truncate">{idea.author_name}</span>
                           </div>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <ShareButton 
+                            ideaId={idea.id}
+                            title={idea.title}
+                            size={size === 'lg' ? 'lg' : 'default'}
+                          />
                           <VoteButtons 
                             currentVote={currentVote}
                             upvotes={idea.upvotes}
@@ -457,7 +488,12 @@ const IdeaCard = memo(({ idea: initialIdea, onVote, size = 'default' }: IdeaCard
           </DialogContent>
         </Dialog>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
+          <ShareButton 
+            ideaId={idea.id}
+            title={idea.title}
+            size={size === 'lg' ? 'lg' : 'default'}
+          />
           <VoteButtons 
             currentVote={currentVote}
             upvotes={idea.upvotes}

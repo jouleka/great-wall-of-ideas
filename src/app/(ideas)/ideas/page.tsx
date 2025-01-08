@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic'
 import { useIdeas } from "@/hooks/use-ideas"
 import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useSearchParams } from "next/navigation"
 
 // Dynamically import heavy components
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { 
@@ -73,6 +74,16 @@ export default function GreatWallOfIdeas() {
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [searchPlaceholder, setSearchPlaceholder] = useState(getSearchPlaceholder())
+  const searchParams = useSearchParams()
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
+
+  // Handle shared idea URLs
+  useEffect(() => {
+    const sharedIdeaId = searchParams.get('id')
+    if (sharedIdeaId) {
+      setSelectedIdeaId(sharedIdeaId)
+    }
+  }, [searchParams])
 
   // Add effect to update placeholder on resize
   useEffect(() => {
@@ -263,7 +274,16 @@ export default function GreatWallOfIdeas() {
             {!isLoading && filteredIdeas.length > 0 && (
               <div className={`grid gap-3 sm:gap-4 ${GRID_LAYOUTS.sm} sm:${GRID_LAYOUTS.md} lg:${GRID_LAYOUTS.lg} xl:${GRID_LAYOUTS.xl}`}>
                 {filteredIdeas.map((idea) => (
-                  <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
+                  <div key={idea.id} data-idea-id={idea.id}>
+                    <IdeaCard 
+                      idea={idea} 
+                      onVote={handleVote} 
+                      isOpen={selectedIdeaId === idea.id}
+                      onOpenChange={(open) => {
+                        if (!open) setSelectedIdeaId(null)
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             )}
