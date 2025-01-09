@@ -8,6 +8,7 @@ export interface Idea {
   created_at: string
   author_name: string
   is_anonymous: boolean
+  is_private: boolean
   updated_at: string
   upvotes: number
   downvotes: number

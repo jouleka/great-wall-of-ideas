@@ -46,7 +46,8 @@ export const ideaService = {
         ...idea,
         upvotes: 0,
         downvotes: 0,
-        views: 0
+        views: 0,
+        is_private: idea.is_private || false
       })
       .select()
       .single()

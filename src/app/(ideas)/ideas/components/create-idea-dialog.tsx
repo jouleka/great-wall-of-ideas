@@ -13,6 +13,7 @@ import { Idea } from "@/lib/types/idea"
 import { useRouter } from 'next/navigation'
 import DOMPurify from 'isomorphic-dompurify'
 import { cn } from "@/lib/utils"
+import { Lock } from "lucide-react"
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -33,6 +34,7 @@ type FormInputs = {
   category: string;
   tags: string;
   is_anonymous: boolean;
+  is_private: boolean;
 }
 
 const STORAGE_KEY = 'idea-form-draft'
@@ -116,7 +118,8 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
         author_name: data.is_anonymous ? "Anonymous" : (user.profile.username || "Unknown"),
         status: "pending",
         is_featured: false,
-        is_anonymous: data.is_anonymous
+        is_anonymous: data.is_anonymous,
+        is_private: data.is_private
       })
 
       reset()
@@ -352,16 +355,29 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
                     )}
                   </div>
 
-                  <div className="flex items-center sm:col-span-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="is_anonymous"
-                      {...register("is_anonymous")}
-                      className="mr-2 h-4 w-4 rounded border-gray-300"
-                    />
-                    <Label htmlFor="is_anonymous" className="text-base font-semibold flex items-center cursor-pointer">
-                      <Eye className="mr-2 h-5 w-5" /> Post Anonymously
-                    </Label>
+                  <div className="flex items-center sm:col-span-2 pt-2 space-x-6">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_anonymous"
+                        {...register("is_anonymous")}
+                        className="mr-2 h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label htmlFor="is_anonymous" className="text-base font-semibold flex items-center cursor-pointer">
+                        <Eye className="mr-2 h-5 w-5" /> Post Anonymously
+                      </Label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_private"
+                        {...register("is_private")}
+                        className="mr-2 h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label htmlFor="is_private" className="text-base font-semibold flex items-center cursor-pointer">
+                        <Lock className="mr-2 h-5 w-5" /> Make Private
+                      </Label>
+                    </div>
                   </div>
                 </div>
 

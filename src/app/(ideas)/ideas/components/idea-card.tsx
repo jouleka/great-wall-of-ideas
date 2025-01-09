@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo, useState, useEffect, useCallback } from "react"
-import { Award, User, X, Trash2 } from "lucide-react"
+import { Award, User, X, Trash2, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -277,6 +277,12 @@ const IdeaCard = memo(({
                 {ideaBadge.text}
               </Badge>
             )}
+            {idea.is_private && (
+              <Badge variant="outline" className="border-zinc-200 dark:border-zinc-700 bg-background text-foreground">
+                <Lock className="w-3 h-3 mr-1" />
+                Private
+              </Badge>
+            )}
             {user?.id === idea.user_id && <DeleteButton />}
           </div>
         </div>
@@ -331,6 +337,12 @@ const IdeaCard = memo(({
                       {ideaBadge && (
                         <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800 text-xs`}>
                           {ideaBadge?.text}
+                        </Badge>
+                      )}
+                      {idea.is_private && (
+                        <Badge variant="outline" className="border-zinc-200 dark:border-zinc-700 bg-background text-foreground text-xs">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Private
                         </Badge>
                       )}
                       {user?.id === idea.user_id && <DeleteButton />}
@@ -443,9 +455,19 @@ const IdeaCard = memo(({
                           </Tooltip>
                         </TooltipProvider>
                       </DialogTitle>
-                      <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
-                        {ideaBadge?.text}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {ideaBadge && (
+                          <Badge variant="secondary" className={`bg-${ideaBadge?.variant}-100 text-${ideaBadge?.variant}-800`}>
+                            {ideaBadge?.text}
+                          </Badge>
+                        )}
+                        {idea.is_private && (
+                          <Badge variant="outline" className="border-zinc-200 dark:border-zinc-700 bg-background text-foreground">
+                            <Lock className="w-3 h-3 mr-1" />
+                            Private
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <DialogDescription className="flex items-center gap-2 mt-2">
                       <Award className="w-4 h-4 text-blue-500" />
