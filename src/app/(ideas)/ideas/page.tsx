@@ -12,6 +12,7 @@ import { useIdeas } from "@/hooks/use-ideas"
 import { Idea } from "@/lib/types/idea"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useSearchParams } from "next/navigation"
+import { HeroSection } from "./components/hero-section"
 
 // Dynamically import heavy components
 const IdeaCard = dynamic(() => import("./components/idea-card").then(mod => mod.IdeaCard), { 
@@ -133,6 +134,9 @@ export default function GreatWallOfIdeas() {
       }}
     >
       <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Add Hero Section */}
+        <HeroSection />
+
         {/* Improved search and create layout - always single row */}
         <div className="mb-6 sm:mb-8">
           <Label htmlFor="search" className="text-base lg:text-lg font-semibold block mb-2">

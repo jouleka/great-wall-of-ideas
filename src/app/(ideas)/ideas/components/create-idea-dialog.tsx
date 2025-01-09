@@ -128,7 +128,11 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
       setIsOpen(false)
       
       toast.success("Idea Launched!", {
-        description: "Your brilliant idea is now live on the Great Wall!"
+        description: "Your brilliant idea is now live on the Great Wall!",
+        style: {
+          backgroundColor: "hsl(var(--background))",
+          color: "hsl(var(--foreground))"
+        }
       })
     } catch (error) {
       console.error('Error creating idea:', error)
