@@ -3,7 +3,8 @@ export interface Idea {
   title: string
   description: string
   target_audience: string
-  category: string
+  category_id: string
+  subcategory_id?: string
   user_id: string
   created_at: string
   author_name: string

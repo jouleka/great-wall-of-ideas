@@ -1,6 +1,14 @@
 import { Idea } from "@/lib/types/idea"
-import { LucideIcon, Lightbulb, Flame, Star, TrendingUp, Rocket, Target, Building } from "lucide-react"
-import { useMemo } from 'react'
+import { 
+  LucideIcon, Lightbulb, Flame, Star, TrendingUp, Rocket, Target, Building, 
+  Code, Cpu, Brain, ShoppingCart, HeartHandshake, Gamepad, Pen, Film, 
+  Leaf, GraduationCap, Stethoscope, Link, Signal, Cloud, Shield, Settings,
+  Wallet, Home, Timer, Users, Music, PenTool, Palette, Video, Camera,
+  Heart, Accessibility, Scale, Laptop, Languages, Baby, TestTube, Activity,
+  Dumbbell, Apple, Play, Glasses, Ticket, Trophy, Sun, Recycle, Car, Monitor
+} from "lucide-react"
+import { useMemo, useEffect, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000
 const MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000
@@ -16,11 +24,87 @@ interface IdeaStatus {
 }
 
 // Category to icon mapping
-const categoryIcons: Record<string, LucideIcon> = {
-  feature: Rocket,
-  improvement: Target,
-  bug: Building,
-  default: Lightbulb
+export const categoryIcons: Record<string, LucideIcon> = {
+  // Technology
+  'software-apps': Code,
+  'hardware': Cpu,
+  'ai-ml': Brain,
+  'blockchain': Link,
+  'iot': Signal,
+  'cloud': Cloud,
+  'cybersecurity': Shield,
+  'devops': Settings,
+  'technology': Monitor,
+
+  // Business
+  'startups': Rocket,
+  'ecommerce': ShoppingCart,
+  'services': HeartHandshake,
+  'fintech': Wallet,
+  'marketing': Target,
+  'real-estate': Home,
+  'productivity': Timer,
+  'hr': Users,
+  'business': Building,
+
+  // Creative
+  'games': Gamepad,
+  'design': Pen,
+  'media': Film,
+  'music': Music,
+  'writing': PenTool,
+  'art': Palette,
+  'animation': Video,
+  'photography': Camera,
+  'creative': Palette,
+
+  // Social Impact
+  'community': Users,
+  'non-profit': Heart,
+  'accessibility': Accessibility,
+  'diversity': Users,
+  'social-justice': Scale,
+  'humanitarian': HeartHandshake,
+  'social-impact': Heart,
+
+  // Education
+  'elearning': Laptop,
+  'edtech': Lightbulb,
+  'language': Languages,
+  'professional-dev': GraduationCap,
+  'early-education': Baby,
+  'stem': TestTube,
+  'education': GraduationCap,
+
+  // Health
+  'digital-health': Activity,
+  'mental-health': Brain,
+  'fitness': Dumbbell,
+  'nutrition': Apple,
+  'medical-devices': Stethoscope,
+  'telehealth': Video,
+  'health': Stethoscope,
+
+  // Entertainment
+  'streaming': Play,
+  'vr': Glasses,
+  'live-events': Ticket,
+  'gaming': Gamepad,
+  'social-entertainment': Users,
+  'sports': Trophy,
+  'entertainment': Film,
+
+  // Environment
+  'clean-energy': Sun,
+  'recycling': Recycle,
+  'conservation': Leaf,
+  'sustainable-transport': Car,
+  'climate-tech': Cloud,
+  'green-building': Home,
+  'environment': Leaf,
+
+  // Default
+  'default': Lightbulb
 }
 
 // Status to badge mapping
@@ -32,10 +116,31 @@ const statusBadges: Record<string, { text: string; variant: string }> = {
   planned: { text: "Coming Soon", variant: "purple" }
 }
 
-export function useIdeaIcon(category: string): LucideIcon {
+export function useIdeaIcon(categoryId: string): LucideIcon {
+  const [categorySlug, setCategorySlug] = useState<string>('default')
+
+  useEffect(() => {
+    const fetchCategory = async () => {
+      if (!categoryId) return
+      
+      const supabase = createClientComponentClient()
+      const { data: category } = await supabase
+        .from('categories')
+        .select('slug')
+        .eq('id', categoryId)
+        .single()
+
+      if (category) {
+        setCategorySlug(category.slug)
+      }
+    }
+
+    fetchCategory()
+  }, [categoryId])
+
   return useMemo(() => {
-    return categoryIcons[category.toLowerCase()] || categoryIcons.default
-  }, [category])
+    return categoryIcons[categorySlug] || categoryIcons.default
+  }, [categorySlug])
 }
 
 export function useIdeaBadge(status: string): { text: string; variant: string } | null {
@@ -90,7 +195,7 @@ function getIdeaStatus(idea: Idea): IdeaStatus {
 
   // Default status
   return { 
-    icon: categoryIcons[idea.category?.toLowerCase()] || categoryIcons.default, 
+    icon: Lightbulb,
     badge: statusBadges[idea.status] || null 
   }
 }

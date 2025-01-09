@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import dynamic from 'next/dynamic'
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
@@ -14,6 +15,8 @@ import { useRouter } from 'next/navigation'
 import DOMPurify from 'isomorphic-dompurify'
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
+import { categoryService } from '@/lib/services/category-service'
+import { CategoryWithSubcategories } from '@/lib/types/category'
 
 const Lightbulb = dynamic(() => import('lucide-react').then((mod) => mod.Lightbulb))
 const Sparkles = dynamic(() => import('lucide-react').then((mod) => mod.Sparkles))
@@ -31,7 +34,8 @@ type FormInputs = {
   title: string;
   description: string;
   target_audience: string;
-  category: string;
+  category_id: string;
+  subcategory_id?: string;
   tags: string;
   is_anonymous: boolean;
   is_private: boolean;
@@ -77,6 +81,25 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
+  const [categories, setCategories] = useState<CategoryWithSubcategories[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<CategoryWithSubcategories | null>(null)
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await categoryService.getAllCategories()
+        setCategories(cats)
+      } catch (error) {
+        console.error('Error loading categories:', error)
+        toast.error("Failed to load categories")
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+    loadCategories()
+  }, [])
 
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY)
@@ -100,6 +123,14 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
     }
   }, [formValues])
 
+  // Handle category selection
+  const handleCategoryChange = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId)
+    setSelectedCategory(category || null)
+    setValue('category_id', categoryId)
+    setValue('subcategory_id', undefined) // Reset subcategory when category changes
+  }
+
   const onSubmit: SubmitHandler<FormInputs> = useCallback(async (data: FormInputs) => {
     if (!user?.profile) {
       toast.error("Please sign in to share your idea")
@@ -112,7 +143,8 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
         title: sanitizeText(data.title),
         description: sanitizeText(description, true),
         target_audience: sanitizeText(data.target_audience),
-        category: sanitizeText(data.category),
+        category_id: data.category_id,
+        subcategory_id: data.subcategory_id,
         tags: formatTags(data.tags),
         user_id: user.id,
         author_name: data.is_anonymous ? "Anonymous" : (user.profile.username || "Unknown"),
@@ -295,32 +327,56 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
                     <Label htmlFor="category" className="text-base font-semibold flex items-center">
                       <Tag className="mr-2 h-5 w-5" /> Category
                     </Label>
-                    <Input
-                      id="category"
-                      {...register("category", { 
-                        required: "Category is required",
-                        minLength: {
-                          value: 2,
-                          message: "Category must be at least 2 characters"
-                        },
-                        maxLength: {
-                          value: 30,
-                          message: "Category must be less than 30 characters"
-                        }
-                      })}
-                      className="h-10"
-                      placeholder="e.g., Technology, Education, Entertainment"
-                      aria-describedby="category-description"
-                    />
-                    <p id="category-description" className="text-sm text-muted-foreground">
-                      Choose a broad category that best fits your idea
-                    </p>
-                    {errors.category && (
-                      <p id="category-error" className="text-sm text-red-500 mt-1">
-                        {errors.category.message}
+                    <Select
+                      onValueChange={handleCategoryChange}
+                      {...register("category_id", { required: "Category is required" })}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingCategories ? (
+                          <SelectItem value="loading" disabled>
+                            Loading categories...
+                          </SelectItem>
+                        ) : (
+                          categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {errors.category_id && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.category_id.message}
                       </p>
                     )}
                   </div>
+
+                  {selectedCategory?.subcategories && selectedCategory.subcategories.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="subcategory" className="text-base font-semibold flex items-center">
+                        <Tag className="mr-2 h-5 w-5" /> Subcategory
+                      </Label>
+                      <Select
+                        onValueChange={(value) => setValue('subcategory_id', value)}
+                        {...register("subcategory_id")}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select a subcategory (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCategory.subcategories.map((subcategory) => (
+                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                              {subcategory.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="tags" className="text-base font-semibold flex items-center">
