@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo, useState, useEffect, useCallback } from "react"
-import { Award, User, X } from "lucide-react"
+import { Award, User, X, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -22,6 +22,7 @@ import type { Database } from "@/lib/types/database"
 import DOMPurify from 'isomorphic-dompurify'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ShareButton } from "./share-button"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 interface IdeaCardProps {
   idea: Idea
@@ -29,6 +30,7 @@ interface IdeaCardProps {
   size?: 'default' | 'lg'
   isOpen?: boolean
   onOpenChange?: (open: boolean) => void
+  onDelete?: (ideaId: string) => Promise<boolean>
 }
 
 const editorStyles = `
@@ -109,7 +111,8 @@ const IdeaCard = memo(({
   onVote, 
   size = 'default',
   isOpen,
-  onOpenChange 
+  onOpenChange,
+  onDelete
 }: IdeaCardProps) => {
   const { user } = useAuth()
   const router = useRouter()
@@ -223,16 +226,59 @@ const IdeaCard = memo(({
     }
   }
 
+  const DeleteButton = () => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            size === 'lg' ? 'h-8 w-8' : 'h-6 w-6',
+            "text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+          )}
+        >
+          <Trash2 className={size === 'lg' ? 'h-4 w-4' : 'h-3 w-3'} />
+          <span className="sr-only">Delete idea</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete your idea and all its associated data.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              const success = await onDelete?.(idea.id)
+              if (success && isDialogOpen) {
+                setIsDialogOpen(false)
+              }
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+
   return (
     <Card className="flex flex-col justify-between w-full hover:shadow-lg transition-shadow duration-300 bg-card">
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between">
           <IconComponent className="w-5 h-5 text-primary" />
-          {ideaBadge && (
-            <Badge variant="secondary" className={`bg-${ideaBadge.variant}-100 text-${ideaBadge.variant}-800`}>
-              {ideaBadge.text}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {ideaBadge && (
+              <Badge variant="secondary" className={`bg-${ideaBadge.variant}-100 text-${ideaBadge.variant}-800`}>
+                {ideaBadge.text}
+              </Badge>
+            )}
+            {user?.id === idea.user_id && <DeleteButton />}
+          </div>
         </div>
         <CardTitle className="text-lg font-semibold line-clamp-1">
           {idea.title}
@@ -287,6 +333,7 @@ const IdeaCard = memo(({
                           {ideaBadge?.text}
                         </Badge>
                       )}
+                      {user?.id === idea.user_id && <DeleteButton />}
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <X className="h-4 w-4" />

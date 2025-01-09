@@ -42,7 +42,10 @@ export function useIdeas() {
       pageRef.current = page
     } catch (error) {
       console.error('Error loading ideas:', error)
-      toast.error("Failed to load ideas")
+      toast.error("Failed to load ideas", {
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
+      })
       if (page === 0) {
         setIdeas([])
       }
@@ -166,6 +169,44 @@ export function useIdeas() {
     }
   }, [supabase, resetAndLoad])
 
+  const deleteIdea = useCallback(async (ideaId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error("Please sign in to delete your idea", {
+          className: "dark:bg-zinc-800 dark:text-zinc-200",
+          descriptionClassName: "dark:text-zinc-400"
+        })
+        return false
+      }
+
+      const { error } = await supabase
+        .from('ideas')
+        .delete()
+        .eq('id', ideaId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Optimistically remove the idea from the list
+      setIdeas(prev => prev.filter(idea => idea.id !== ideaId))
+
+      toast.success("Idea deleted successfully", {
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error deleting idea:', error)
+      toast.error("Failed to delete idea", {
+        className: "dark:bg-zinc-800 dark:text-zinc-200",
+        descriptionClassName: "dark:text-zinc-400"
+      })
+      return false
+    }
+  }, [supabase])
+
   return {
     ideas,
     isLoading,
@@ -173,6 +214,7 @@ export function useIdeas() {
     hasMore,
     handleVote,
     createIdea,
+    deleteIdea,
     loadMore: () => loadIdeas(pageRef.current + 1),
     resetIdeas: resetAndLoad,
     sortType,

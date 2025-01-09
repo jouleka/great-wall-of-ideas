@@ -68,7 +68,8 @@ export default function GreatWallOfIdeas() {
     hasMore, 
     resetIdeas,
     sortType,
-    setSortType 
+    setSortType,
+    deleteIdea
   } = useIdeas()
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -277,7 +278,8 @@ export default function GreatWallOfIdeas() {
                   <div key={idea.id} data-idea-id={idea.id}>
                     <IdeaCard 
                       idea={idea} 
-                      onVote={handleVote} 
+                      onVote={handleVote}
+                      onDelete={deleteIdea}
                       isOpen={selectedIdeaId === idea.id}
                       onOpenChange={(open) => {
                         if (!open) setSelectedIdeaId(null)
