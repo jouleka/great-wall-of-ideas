@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, memo } from "react"
 import { useIntersection } from "@/hooks/use-intersection"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { formatDistanceToNow } from "date-fns"
 import { Comment } from "@/lib/types/comment"
 import { motion, AnimatePresence } from "framer-motion"
 import { ReportDialog } from '@/components/report-dialog'
+import { cn } from "@/lib/utils/utils"
 
 interface CommentWithAuthor extends Comment {
   author_avatar?: string | null
@@ -23,6 +24,8 @@ interface CommentWithAuthor extends Comment {
 interface CommentSectionProps {
   ideaId: string
   initialComments?: CommentWithAuthor[]
+  ideaUserId?: string
+  isAnonymous?: boolean
 }
 
 interface CommentItemProps {
@@ -30,18 +33,19 @@ interface CommentItemProps {
   onReply: (parentId: string) => void
   depth?: number
   maxDepth?: number
+  isOriginalCreator: boolean
 }
 
 const MAX_COMMENT_DEPTH = 10
 
-function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH }: CommentItemProps) {
+const CommentItem = memo(function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH, isOriginalCreator }: CommentItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { user } = useAuth()
   const hasReplies = comment.replies && comment.replies.length > 0
   const canReply = depth < maxDepth
 
-  // Calculate indentation color based on depth
-  const getIndentationColor = (depth: number) => {
+  // Memoize the indentation color calculation
+  const getIndentationColor = useCallback((depth: number) => {
     const colors = [
       'border-primary/30',
       'border-primary/25',
@@ -50,7 +54,17 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
       'border-primary/10'
     ]
     return colors[Math.min(depth - 1, colors.length - 1)] || colors[colors.length - 1]
-  }
+  }, [])
+
+  // Memoize the reply handler
+  const handleReplyClick = useCallback(() => {
+    onReply(comment.id)
+  }, [comment.id, onReply])
+
+  // Memoize the expand/collapse handler
+  const handleExpandClick = useCallback(() => {
+    setIsExpanded(prev => !prev)
+  }, [])
 
   return (
     <div className="group relative">
@@ -70,16 +84,31 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
           paddingLeft: `${Math.min(depth * 12 + 8, 36)}px`,
         }}
       >
-        <Avatar className="h-6 w-6 flex-shrink-0 sm:h-8 sm:w-8">
-          <AvatarImage src={comment.author_avatar || ''} alt={comment.author_name} />
-          <AvatarFallback className="bg-primary/10 text-xs sm:text-sm">
-            {getInitials(comment.author_name)}
-          </AvatarFallback>
-        </Avatar>
+        {/* Only show avatar if not anonymous creator */}
+        {!(isOriginalCreator && comment.author_name === "Anonymous") && (
+          <Avatar className="h-6 w-6 flex-shrink-0 sm:h-8 sm:w-8">
+            <AvatarImage src={comment.author_avatar || ''} alt={comment.author_name} />
+            <AvatarFallback className="bg-primary/10 text-xs sm:text-sm">
+              {getInitials(comment.author_name)}
+            </AvatarFallback>
+          </Avatar>
+        )}
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-xs sm:text-sm">{comment.author_name}</span>
+            <span className="font-semibold text-xs sm:text-sm">
+              {comment.author_name}
+              {isOriginalCreator && (
+                <span className={cn(
+                  "ml-2 text-[10px] px-2 py-0.5 rounded-full font-medium",
+                  comment.author_name === "Anonymous" 
+                    ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                    : "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300"
+                )}>
+                  Creator
+                </span>
+              )}
+            </span>
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
             </span>
@@ -95,7 +124,7 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
                 variant="ghost"
                 size="sm"
                 className="h-6 px-2 text-xs gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                onClick={() => onReply(comment.id)}
+                onClick={handleReplyClick}
               >
                 <Reply className="h-3 w-3" />
                 Reply
@@ -106,7 +135,7 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
                 variant="ghost"
                 size="sm"
                 className="h-6 px-2 text-xs"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleExpandClick}
               >
                 {isExpanded ? "Hide Replies" : `Show ${comment.replies?.length} ${comment.replies?.length === 1 ? 'Reply' : 'Replies'}`}
               </Button>
@@ -132,6 +161,7 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
                   onReply={onReply}
                   depth={depth + 1}
                   maxDepth={maxDepth}
+                  isOriginalCreator={isOriginalCreator}
                 />
               </motion.div>
             ))}
@@ -140,9 +170,9 @@ function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH
       )}
     </div>
   )
-}
+})
 
-export function CommentSection({ ideaId, initialComments = [] }: CommentSectionProps) {
+export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAnonymous }: CommentSectionProps) {
   const { user } = useAuth()
   const router = useRouter()
   const [comments, setComments] = useState<CommentWithAuthor[]>(initialComments)
@@ -244,20 +274,31 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
 
     setIsSubmitting(true)
     try {
+      // Check if this is the original creator commenting
+      const isOriginalCreator = user.id === ideaUserId
+      const shouldBeAnonymous = isOriginalCreator && isAnonymous
+      
       const response = await fetch(`/api/ideas/${ideaId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           content: commentText,
           parent_id: replyingTo,
-          author_name: user.profile?.username || "Anonymous",
-          author_avatar: user.profile?.avatar_url || null
+          author_name: shouldBeAnonymous ? "Anonymous" : user.profile?.username || "Anonymous",
+          author_avatar: shouldBeAnonymous ? null : user.profile?.avatar_url || null
         })
       })
 
       if (!response.ok) throw new Error('Failed to post comment')
 
       const comment: CommentWithAuthor = await response.json()
+      
+      // Add avatar and author info from user profile
+      const commentWithProfile = {
+        ...comment,
+        author_name: shouldBeAnonymous ? "Anonymous" : user.profile?.username || "Anonymous",
+        author_avatar: shouldBeAnonymous ? null : user.profile?.avatar_url || null
+      }
       
       if (replyingTo) {
         // Add reply to the parent comment
@@ -267,7 +308,7 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
               if (c.id === replyingTo) {
                 return {
                   ...c,
-                  replies: [...(c.replies || []), { ...comment, replies: [] }]
+                  replies: [...(c.replies || []), { ...commentWithProfile, replies: [] }]
                 }
               }
               if (c.replies?.length) {
@@ -283,7 +324,7 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
         })
       } else {
         // Add new root comment
-        setComments(prev => [{ ...comment, replies: [] }, ...prev])
+        setComments(prev => [{ ...commentWithProfile, replies: [] }, ...prev])
       }
 
       setNewComment("")
@@ -329,6 +370,7 @@ export function CommentSection({ ideaId, initialComments = [] }: CommentSectionP
                   <CommentItem
                     comment={comment}
                     onReply={handleReply}
+                    isOriginalCreator={comment.user_id === ideaUserId}
                   />
                 </motion.div>
               ))

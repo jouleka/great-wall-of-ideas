@@ -148,6 +148,11 @@ UPDATE ideas
 SET category_id = map_old_category_to_new(category)
 WHERE category IS NOT NULL;
 
+-- Handle any remaining NULL category_ids by setting them to technology (as a default)
+UPDATE ideas
+SET category_id = (SELECT id FROM categories WHERE slug = 'technology')
+WHERE category_id IS NULL;
+
 -- Update idea counts
 UPDATE categories c
 SET idea_count = (
@@ -156,7 +161,7 @@ SET idea_count = (
   WHERE category_id = c.id
 );
 
--- Make category_id required after migration
+-- Now we can safely make category_id required
 ALTER TABLE ideas
 ALTER COLUMN category_id SET NOT NULL;
 

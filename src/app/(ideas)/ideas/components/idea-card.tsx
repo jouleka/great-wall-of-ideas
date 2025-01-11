@@ -427,7 +427,11 @@ const IdeaCard = memo(({
 
                   {/* Comments Section */}
                   <div className="border-t">
-                    <CommentSection ideaId={idea.id} />
+                    <CommentSection 
+                      ideaId={idea.id} 
+                      ideaUserId={idea.user_id}
+                      isAnonymous={idea.is_anonymous}
+                    />
                   </div>
                 </ScrollArea>
               </div>
@@ -549,7 +553,11 @@ const IdeaCard = memo(({
               <div className="col-span-2 border-l h-full overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="pb-20">
-                    <CommentSection ideaId={idea.id} />
+                    <CommentSection 
+                      ideaId={idea.id}
+                      ideaUserId={idea.user_id}
+                      isAnonymous={idea.is_anonymous}
+                    />
                   </div>
                 </ScrollArea>
               </div>
