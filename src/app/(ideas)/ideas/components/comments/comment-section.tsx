@@ -34,11 +34,12 @@ interface CommentItemProps {
   depth?: number
   maxDepth?: number
   isOriginalCreator: boolean
+  ideaUserId: string
 }
 
 const MAX_COMMENT_DEPTH = 10
 
-const CommentItem = memo(function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH, isOriginalCreator }: CommentItemProps) {
+const CommentItem = memo(function CommentItem({ comment, onReply, depth = 0, maxDepth = MAX_COMMENT_DEPTH, isOriginalCreator, ideaUserId }: CommentItemProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { user } = useAuth()
   const hasReplies = comment.replies && comment.replies.length > 0
@@ -161,7 +162,8 @@ const CommentItem = memo(function CommentItem({ comment, onReply, depth = 0, max
                   onReply={onReply}
                   depth={depth + 1}
                   maxDepth={maxDepth}
-                  isOriginalCreator={isOriginalCreator}
+                  isOriginalCreator={reply.user_id === ideaUserId}
+                  ideaUserId={ideaUserId}
                 />
               </motion.div>
             ))}
@@ -371,6 +373,7 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
                     comment={comment}
                     onReply={handleReply}
                     isOriginalCreator={comment.user_id === ideaUserId}
+                    ideaUserId={ideaUserId || ''}
                   />
                 </motion.div>
               ))
