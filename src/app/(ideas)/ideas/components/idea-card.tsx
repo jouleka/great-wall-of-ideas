@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo, useState, useEffect, useCallback } from "react"
-import { Award, User, X, Trash2, Lock } from "lucide-react"
+import { Award, User, X, Trash2, Lock, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -123,6 +123,7 @@ const IdeaCard = memo(({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isTitleExpanded, setIsTitleExpanded] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const supabase = createClientComponentClient<Database>()
 
@@ -313,7 +314,12 @@ const IdeaCard = memo(({
               Explore Idea
             </Button>
           </DialogTrigger>
-          <DialogContent className="flex flex-col sm:max-w-[900px] p-0 gap-0 h-[95vh] sm:h-[90vh] w-full max-w-full overflow-hidden">
+          <DialogContent className={cn(
+            "p-0 flex flex-col overflow-hidden",
+            !user ? "sm:max-w-[400px] h-auto max-h-[90vh]" : 
+            isFullscreen ? "sm:w-screen sm:h-screen sm:max-w-none !sm:resize-none" :
+            "w-screen h-screen sm:w-[900px] sm:h-[95vh] sm:max-h-[95vh] sm:min-w-[300px] sm:max-w-[95vw] sm:resize-x"
+          )}>
             {/* Mobile View */}
             <div className="sm:hidden h-full flex flex-col">
               {/* Fixed Header - Sticky */}
@@ -471,6 +477,22 @@ const IdeaCard = memo(({
                             Private
                           </Badge>
                         )}
+                        {user?.id === idea.user_id && <DeleteButton />}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setIsFullscreen(prev => !prev)}
+                        >
+                          {isFullscreen ? (
+                            <Minimize2 className="h-4 w-4" />
+                          ) : (
+                            <Maximize2 className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">
+                            {isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                          </span>
+                        </Button>
                       </div>
                     </div>
                     <DialogDescription className="flex items-center gap-2 mt-2">

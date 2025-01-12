@@ -14,7 +14,7 @@ import { Idea } from "@/lib/types/idea"
 import { useRouter } from 'next/navigation'
 import DOMPurify from 'isomorphic-dompurify'
 import { cn } from "@/lib/utils"
-import { Lock } from "lucide-react"
+import { Lock, Maximize2, Minimize2 } from "lucide-react"
 import { categoryService } from '@/lib/services/category-service'
 import { CategoryWithSubcategories } from '@/lib/types/category'
 
@@ -84,6 +84,7 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
   const [categories, setCategories] = useState<CategoryWithSubcategories[]>([])
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithSubcategories | null>(null)
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Load categories
   useEffect(() => {
@@ -193,10 +194,33 @@ export function CreateIdeaDialog({ createIdea }: CreateIdeaDialogProps) {
           <Rocket className="mr-2 h-5 w-5" /> Share Your Idea
         </Button>
       </DialogTrigger>
-      <DialogContent className={cn(
-        "p-0 flex flex-col overflow-hidden",
-        !user ? "sm:max-w-[400px] h-auto max-h-[90vh]" : "sm:max-w-[600px] md:max-w-[800px] h-[95vh] max-h-[95vh]"
-      )}>
+      <DialogContent 
+        className={cn(
+          "p-0 flex flex-col overflow-hidden",
+          !user ? "sm:max-w-[400px] h-auto max-h-[90vh]" : 
+          "w-screen h-screen",
+          !user ? "" : isFullscreen 
+            ? "sm:w-screen sm:h-screen sm:max-w-none !sm:resize-none" 
+            : "sm:w-[900px] sm:h-[95vh] sm:max-h-[95vh] sm:min-w-[300px] sm:max-w-[95vw] sm:resize-x"
+        )}
+        fullscreenButton={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFullscreen(prev => !prev)}
+            className="hidden sm:flex rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            </span>
+          </Button>
+        }
+      >
         {!user ? (
           <div className="p-6">
             <DialogHeader className="space-y-4">

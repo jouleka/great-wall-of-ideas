@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect, memo } from "react"
 import { useIntersection } from "@/hooks/use-intersection"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, MessageSquare, Reply } from "lucide-react"
@@ -16,6 +16,101 @@ import { Comment } from "@/lib/types/comment"
 import { motion, AnimatePresence } from "framer-motion"
 import { ReportDialog } from '@/components/report-dialog'
 import { cn } from "@/lib/utils/utils"
+import DOMPurify from 'isomorphic-dompurify'
+
+// Add editor styles
+const editorStyles = `
+  .ProseMirror {
+    min-height: 100px;
+    padding: 0.5rem;
+    outline: none;
+  }
+
+  .ProseMirror > * + * {
+    margin-top: 0.75em;
+  }
+
+  .ProseMirror ul,
+  .ProseMirror ol {
+    padding: 0 1rem;
+    margin: 0.5rem 0;
+  }
+
+  .ProseMirror ul {
+    list-style-type: disc;
+  }
+
+  .ProseMirror ol {
+    list-style-type: decimal;
+  }
+
+  .ProseMirror blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+  }
+
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: #9ca3af;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .comment-content {
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  
+  .comment-content > * + * {
+    margin-top: 0.75em;
+  }
+
+  .comment-content ul,
+  .comment-content ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .comment-content ul {
+    list-style-type: disc;
+  }
+
+  .comment-content ol {
+    list-style-type: decimal;
+  }
+
+  .comment-content blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+  }
+
+  .comment-content a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .comment-content a:hover {
+    opacity: 0.8;
+  }
+
+  .comment-content p {
+    margin: 0.5rem 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+`
 
 interface CommentWithAuthor extends Comment {
   author_avatar?: string | null
@@ -115,9 +210,15 @@ const CommentItem = memo(function CommentItem({ comment, onReply, depth = 0, max
             </span>
           </div>
           
-          <p className="text-xs sm:text-sm text-card-foreground leading-relaxed break-words mt-1">
-            {comment.content}
-          </p>
+          <div className="prose prose-sm dark:prose-invert max-w-full mt-1">
+            <div 
+              className="comment-content text-xs sm:text-sm text-card-foreground leading-relaxed break-words"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'blockquote'],
+                ALLOWED_ATTR: ['href', 'target', 'rel'],
+              }) }}
+            />
+          </div>
           
           <div className="flex items-center gap-2 mt-2">
             {canReply && user && (
@@ -276,7 +377,6 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
 
     setIsSubmitting(true)
     try {
-      // Check if this is the original creator commenting
       const isOriginalCreator = user.id === ideaUserId
       const shouldBeAnonymous = isOriginalCreator && isAnonymous
       
@@ -295,7 +395,6 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
 
       const comment: CommentWithAuthor = await response.json()
       
-      // Add avatar and author info from user profile
       const commentWithProfile = {
         ...comment,
         author_name: shouldBeAnonymous ? "Anonymous" : user.profile?.username || "Anonymous",
@@ -303,7 +402,6 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
       }
       
       if (replyingTo) {
-        // Add reply to the parent comment
         setComments(prev => {
           const updateReplies = (comments: CommentWithAuthor[]): CommentWithAuthor[] => {
             return comments.map(c => {
@@ -325,7 +423,6 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
           return updateReplies(prev)
         })
       } else {
-        // Add new root comment
         setComments(prev => [{ ...commentWithProfile, replies: [] }, ...prev])
       }
 
@@ -346,13 +443,13 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
 
   return (
     <div className="flex flex-col h-full">
+      <style>{editorStyles}</style>
       <div className="flex items-center gap-2 p-6 border-b">
         <MessageSquare className="h-5 w-5" />
         <h3 className="text-lg font-semibold">Join the Conversation</h3>
       </div>
 
       <div className="flex flex-col h-full">
-        {/* Comments List */}
         <ScrollArea className="flex-1 p-6">
           <AnimatePresence mode="popLayout">
             {comments.length === 0 ? (
@@ -389,7 +486,6 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
           )}
         </ScrollArea>
 
-        {/* Comment Input - Fixed at bottom */}
         <div className="border-t p-4 bg-background/95 sticky bottom-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             {replyingTo && (
@@ -405,13 +501,27 @@ export function CommentSection({ ideaId, initialComments = [], ideaUserId, isAno
                 </Button>
               </div>
             )}
-            <Textarea
-              placeholder={user ? "What do you think about this?" : "Sign in to join the conversation"}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              disabled={!user || isSubmitting}
-              className="min-h-[80px] resize-none bg-background"
-            />
+            {user && !isSubmitting ? (
+              <div className="relative">
+                <RichTextEditor
+                  content={newComment}
+                  onChange={setNewComment}
+                  placeholder="What do you think about this?"
+                  maxLength={2000}
+                  className="min-h-[80px] max-h-[400px]"
+                  error={false}
+                />
+              </div>
+            ) : (
+              <RichTextEditor
+                content=""
+                onChange={() => {}}
+                placeholder="Sign in to join the conversation"
+                maxLength={2000}
+                className="min-h-[80px] opacity-50"
+                error={false}
+              />
+            )}
             <div className="flex justify-end">
               <Button 
                 type="submit"
