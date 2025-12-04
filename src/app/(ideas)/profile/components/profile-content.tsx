@@ -73,7 +73,7 @@ export function ProfileContent() {
           .from('profiles')
           .select('full_name, username, website, bio')
           .eq('id', user.id)
-          .single<{ full_name: string | null; username: string | null; website: string | null; bio: string | null }>()
+          .single()
         
         if (fetchError) throw fetchError
         
