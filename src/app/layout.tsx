@@ -3,8 +3,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import { ThemeProvider } from "next-themes"
 import { RootLayoutContent } from "@/components/root-layout-content"
 
@@ -91,8 +89,6 @@ export default function RootLayout({
             </RootLayoutContent>
             <Toaster />
           </AuthProvider>
-          <Analytics />
-          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
