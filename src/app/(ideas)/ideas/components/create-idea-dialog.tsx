@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { Idea } from "@/lib/types/idea"
 import { IdeaStatus } from "@/lib/types/database"
 import { useRouter } from 'next/navigation'
-import DOMPurify from 'isomorphic-dompurify'
+import DOMPurify from 'dompurify'
 import { cn } from "@/lib/utils"
 import { Lock, Maximize2, Minimize2, Eye, Rocket, Lightbulb, Sparkles, Target, Building, Tag } from "lucide-react"
 import { useCreateIdeaStore } from '@/lib/store/use-create-idea-store'

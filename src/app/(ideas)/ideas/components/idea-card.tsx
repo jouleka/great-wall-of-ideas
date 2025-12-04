@@ -15,7 +15,7 @@ import { CommentSection } from "./comments/comment-section"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { VoteIndicator } from "./vote-indicator"
 import { VoteButtons } from "./vote-buttons"
-import DOMPurify from 'isomorphic-dompurify'
+import DOMPurify from 'dompurify'
 import { ShareButton } from "./share-button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"

@@ -16,7 +16,7 @@ import { Comment } from "@/lib/types/comment"
 import { motion, AnimatePresence } from "framer-motion"
 import { ReportDialog } from '@/components/report-dialog'
 import { cn } from "@/lib/utils/utils"
-import DOMPurify from 'isomorphic-dompurify'
+import DOMPurify from 'dompurify'
 import { Badge } from "@/components/ui/badge"
 import { useCommentsStore } from '@/lib/store/use-comments-store'
 
