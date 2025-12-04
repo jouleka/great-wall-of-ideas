@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { Idea } from "../types/idea"
 import { IdeaStatus } from "../types/database"
 
@@ -34,7 +34,7 @@ export const ideaService = {
     subcategoryId = null, 
     searchTerm = '' 
   }: GetIdeasOptions) {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     // Only get user ideas count if we're in my_ideas tab
@@ -124,7 +124,7 @@ export const ideaService = {
 
   // Clear cache when creating new idea
   async createIdea(idea: Omit<Idea, 'id' | 'created_at' | 'updated_at' | 'upvotes' | 'downvotes' | 'views' | 'current_viewers' | 'engagement_score' | 'last_interaction_at'>) {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { data, error } = await supabase
       .from('ideas')
       .insert({
@@ -163,7 +163,7 @@ export const ideaService = {
   },
 
   async incrementViews(ideaId: string) {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { error } = await supabase
       .rpc('increment_idea_views', {
         idea_id_input: ideaId
@@ -173,7 +173,7 @@ export const ideaService = {
   },
 
   async trackEngagement(ideaId: string, type: 'view' | 'vote' | 'comment') {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     try {
       if (type === 'view') {
@@ -207,7 +207,7 @@ export const ideaService = {
   },
 
   async updateIdeaStatus(ideaId: string, status: IdeaStatus) {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -240,7 +240,7 @@ export const ideaService = {
   },
 
   async makeIdeaPublic(ideaId: string) {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {

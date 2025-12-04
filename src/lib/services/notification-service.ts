@@ -1,9 +1,8 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { type Database } from '@/lib/types/database'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { type Notification, type NotificationType } from '@/lib/types/notification'
 import { type RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
-const supabase = createClientComponentClient<Database>()
+const supabase = createSupabaseClient()
 
 const VALID_NOTIFICATION_TYPES: NotificationType[] = [
   'new_comment',

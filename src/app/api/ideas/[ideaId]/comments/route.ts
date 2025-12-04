@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { Comment } from "@/lib/types/comment"
 
@@ -8,24 +7,27 @@ interface CommentWithAuthor extends Comment {
   replies?: CommentWithAuthor[]
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CommentRow = any
+
 export async function GET(
   request: Request,
-  { params }: { params: { ideaId: string } }
+  { params }: { params: Promise<{ ideaId: string }> }
 ) {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get("page") || "1")
   const pageSize = 10
   
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const { ideaId } = await params
+    const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     
     // First get paginated root comments
     const { data: rootComments, error: rootError } = await supabase
       .from("comments")
       .select("*, comment_likes!left(user_id)")
-      .eq("idea_id", params.ideaId)
+      .eq("idea_id", ideaId)
       .is("parent_id", null)
       .order("created_at", { ascending: false })
       .range((page - 1) * pageSize, page * pageSize - 1)
@@ -41,7 +43,7 @@ export async function GET(
     const { count: totalRootComments, error: countError } = await supabase
       .from("comments")
       .select("*", { count: 'exact', head: true })
-      .eq("idea_id", params.ideaId)
+      .eq("idea_id", ideaId)
       .is("parent_id", null)
 
     if (countError) {
@@ -55,7 +57,7 @@ export async function GET(
     const { data: allReplies, error: repliesError } = await supabase
       .from("comments")
       .select("*, comment_likes!left(user_id)")
-      .eq("idea_id", params.ideaId)
+      .eq("idea_id", ideaId)
       .not("parent_id", "is", null)
       .order("created_at", { ascending: true })
 
@@ -85,7 +87,7 @@ export async function GET(
 
     const commentsWithAvatars = allComments.map(comment => ({
       ...comment,
-      author_avatar: profiles?.find(p => p.id === comment.user_id)?.avatar_url || null,
+      author_avatar: profiles?.find((p: { id: string; avatar_url: string | null }) => p.id === comment.user_id)?.avatar_url || null,
       like_count: comment.comment_likes?.length || 0,
       is_liked: user ? comment.comment_likes?.some((like: { user_id: string }) => like.user_id === user.id) || false : false,
       replies: []
@@ -96,8 +98,8 @@ export async function GET(
     // Recursive reply tree
     const buildReplyTree = (parentId: string): CommentWithAuthor[] => {
       return allReplies
-        ?.filter(reply => reply.parent_id === parentId)
-        .map(reply => {
+        ?.filter((reply: CommentRow) => reply.parent_id === parentId)
+        .map((reply: CommentRow) => {
           const replyWithAvatar = commentMap.get(reply.id)!
           replyWithAvatar.replies = buildReplyTree(reply.id)
           return replyWithAvatar
@@ -105,7 +107,7 @@ export async function GET(
     }
 
     // Add all nested replies to their parents
-    const threadedComments = rootComments?.map(root => {
+    const threadedComments = rootComments?.map((root: CommentRow) => {
       const rootWithAvatar = commentMap.get(root.id)!
       rootWithAvatar.replies = buildReplyTree(root.id)
       return rootWithAvatar
@@ -126,11 +128,11 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { ideaId: string } }
+  { params }: { params: Promise<{ ideaId: string }> }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const { ideaId } = await params
+    const supabase = await createServerSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
     
     if (!session) {
@@ -158,7 +160,7 @@ export async function POST(
     const { data: comment, error: insertError } = await supabase
       .from("comments")
       .insert({
-        idea_id: params.ideaId,
+        idea_id: ideaId,
         user_id: session.user.id,
         content: body.content,
         author_name: body.author_name,

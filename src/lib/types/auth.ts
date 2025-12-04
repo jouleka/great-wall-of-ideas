@@ -1,4 +1,4 @@
-import { User } from '@supabase/auth-helpers-nextjs'
+import { User } from '@supabase/supabase-js'
 
 export interface Profile {
   id: string;

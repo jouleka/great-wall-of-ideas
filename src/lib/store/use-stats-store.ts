@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 interface Stats {
   totalIdeas: number
@@ -42,7 +42,7 @@ export const useStatsStore = create<StatsState & StatsActions>((set) => ({
   initialize: async () => {
     set({ isLoading: true })
     try {
-      const supabase = createClientComponentClient()
+      const supabase = createSupabaseClient()
       const [
         { count: totalIdeas },
         { count: activeUsers },
@@ -97,7 +97,7 @@ export const useStatsStore = create<StatsState & StatsActions>((set) => ({
   setError: (error) => set({ error }),
 
   subscribeToChanges: () => {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const channel = supabase.channel('hero-stats')
       .on('postgres_changes', { 

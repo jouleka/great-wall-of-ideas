@@ -1,6 +1,6 @@
 # Great Wall of Ideas 🧱💡
 
-A fun small platform for sharing and discussing random innovative ideas. Inspiration came from subreddits on Reddit where people post a lot of random ideas on different topics so thought why not have them all in one place. It enables users to share their creative thoughts, collaborate with others, and build upon existing ideas. If you want to see the live site, you can visit https://greatwallofideas.xyz
+A fun small platform for sharing and discussing random innovative ideas. Inspiration came from subreddits on Reddit where people post a lot of random ideas on different topics so thought why not have them all in one place. It enables users to share their creative thoughts, collaborate with others, and build upon existing ideas. If you want to see the live site, you can visit https://greatwallofideas.com
 
 ## ✨ Features
 

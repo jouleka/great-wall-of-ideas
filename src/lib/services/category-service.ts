@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { Category, CategoryWithSubcategories } from "../types/category"
 
 interface IdeaWithRefs {
@@ -14,7 +14,7 @@ interface CategoryWithIdeas extends Category {
 
 export const categoryService = {
   async getAllCategories(): Promise<CategoryWithSubcategories[]> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const { data: categories, error } = await supabase
       .from('categories')
@@ -57,7 +57,7 @@ export const categoryService = {
   },
 
   async getPopularCategories(limit: number = 5): Promise<Category[]> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const { data: categories, error } = await supabase
       .from('categories')
@@ -70,7 +70,7 @@ export const categoryService = {
   },
 
   async createCustomCategory(category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'idea_count' | 'is_custom'>): Promise<Category> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const { data, error } = await supabase
       .from('categories')
@@ -87,7 +87,7 @@ export const categoryService = {
   },
 
   async getCategoryBySlug(slug: string): Promise<CategoryWithSubcategories | null> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const { data: category, error } = await supabase
       .from('categories')
@@ -110,7 +110,7 @@ export const categoryService = {
   },
 
   async searchCategories(query: string): Promise<Category[]> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     
     const { data: categories, error } = await supabase
       .from('categories')

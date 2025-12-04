@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { Idea, RemixNode } from "../types/idea"
 
 export const remixService = {
@@ -6,7 +6,7 @@ export const remixService = {
     originalIdea: Idea,
     newIdea: Omit<Idea, "id" | "created_at" | "updated_at" | "upvotes" | "downvotes" | "views" | "remixed_from_id">
   ): Promise<Idea> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -34,7 +34,7 @@ export const remixService = {
   },
 
   async getRemixHistory(ideaId: string): Promise<RemixNode[]> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
 
     try {
       const { data, error } = await supabase.rpc('get_idea_remix_history', {
@@ -83,7 +83,7 @@ export const remixService = {
   },
 
   async getRemixCount(ideaId: string): Promise<number> {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseClient()
 
     try {
       const { count, error } = await supabase

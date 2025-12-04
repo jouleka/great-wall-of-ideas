@@ -1,14 +1,13 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST(
   request: Request,
-  { params }: { params: { ideaId: string; commentId: string } }
+  { params }: { params: Promise<{ ideaId: string; commentId: string }> }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const { ideaId, commentId } = await params
+    const supabase = await createServerSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
@@ -18,8 +17,8 @@ export async function POST(
     const { data: comment, error: commentError } = await supabase
       .from('comments')
       .select('id')
-      .eq('id', params.commentId)
-      .eq('idea_id', params.ideaId)
+      .eq('id', commentId)
+      .eq('idea_id', ideaId)
       .single()
 
     if (commentError || !comment) {
@@ -32,7 +31,7 @@ export async function POST(
     const { data: existingLike } = await supabase
       .from('comment_likes')
       .select('id')
-      .eq('comment_id', params.commentId)
+      .eq('comment_id', commentId)
       .eq('user_id', session.user.id)
       .single()
 
@@ -40,7 +39,7 @@ export async function POST(
       const { count } = await supabase
         .from('comment_likes')
         .select('*', { count: 'exact', head: true })
-        .eq('comment_id', params.commentId)
+        .eq('comment_id', commentId)
 
       return NextResponse.json({
         like_count: count || 0,
@@ -51,7 +50,7 @@ export async function POST(
     const { error: insertError } = await supabase
       .from('comment_likes')
       .insert({
-        comment_id: params.commentId,
+        comment_id: commentId,
         user_id: session.user.id
       })
 
@@ -65,7 +64,7 @@ export async function POST(
     const { count } = await supabase
       .from('comment_likes')
       .select('*', { count: 'exact', head: true })
-      .eq('comment_id', params.commentId)
+      .eq('comment_id', commentId)
 
     return NextResponse.json({
       like_count: count || 0,
@@ -82,11 +81,11 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { ideaId: string; commentId: string } }
+  { params }: { params: Promise<{ ideaId: string; commentId: string }> }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const { ideaId, commentId } = await params
+    const supabase = await createServerSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
@@ -97,8 +96,8 @@ export async function DELETE(
     const { data: comment, error: commentError } = await supabase
       .from('comments')
       .select('id')
-      .eq('id', params.commentId)
-      .eq('idea_id', params.ideaId)
+      .eq('id', commentId)
+      .eq('idea_id', ideaId)
       .single()
 
     if (commentError || !comment) {
@@ -112,7 +111,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('comment_likes')
       .delete()
-      .eq('comment_id', params.commentId)
+      .eq('comment_id', commentId)
       .eq('user_id', session.user.id)
 
     if (deleteError) {
@@ -125,7 +124,7 @@ export async function DELETE(
     const { count } = await supabase
       .from('comment_likes')
       .select('*', { count: 'exact', head: true })
-      .eq('comment_id', params.commentId)
+      .eq('comment_id', commentId)
 
     return NextResponse.json({
       like_count: count || 0,

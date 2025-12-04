@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { Loading } from "@/components/ui/loading"
 import { useAppStore } from '@/lib/store/use-app-store'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   const { setUser } = useAppStore()
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (!isSubscribed) return
 
       switch (event) {

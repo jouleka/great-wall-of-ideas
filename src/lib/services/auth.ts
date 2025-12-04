@@ -5,7 +5,7 @@ import { getBaseUrl } from '@/lib/utils/get-base-url'
 
 export async function signUp(email: string, password: string, name: string) {
   try {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -132,7 +132,7 @@ export async function signInWithGoogle() {
 
 export async function sendPasswordResetEmail({ email, redirectTo }: { email: string, redirectTo?: string }) {
   try {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectTo || `${siteUrl}/auth/callback?type=recovery`
     })

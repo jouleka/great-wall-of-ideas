@@ -1,7 +1,7 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-const supabase = createClientComponentClient()
+const supabase = createSupabaseClient()
 
 interface ProfileData {
   username: string

@@ -2,10 +2,10 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { User } from '@supabase/auth-helpers-nextjs'
+import { User } from '@supabase/supabase-js'
 import * as authService from '@/lib/services/auth'
 import { Database } from '@/lib/types/database'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { ActivityData } from '@/hooks/use-activity-data'
 
 // Extend the User type to include profile information
@@ -57,7 +57,7 @@ export const useAppStore = create<AppState & AppActions>()(
       },
 
       refreshSession: async () => {
-        const supabase = createClientComponentClient<Database>()
+        const supabase = createSupabaseClient()
         try {
           const { data: { session }, error: sessionError } = await supabase.auth.getSession()
           if (sessionError) throw sessionError
@@ -141,7 +141,7 @@ export const useAppStore = create<AppState & AppActions>()(
 
         set({ activityLoading: true, activityError: null })
         try {
-          const supabase = createClientComponentClient<Database>()
+          const supabase = createSupabaseClient()
           const thirtyDaysAgo = new Date()
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
           
@@ -180,7 +180,7 @@ export const useAppStore = create<AppState & AppActions>()(
             })
           }
 
-          ideasRes.data?.forEach(idea => {
+          ideasRes.data?.forEach((idea: { created_at: string }) => {
             const date = new Date(idea.created_at).toISOString().split('T')[0]
             const data = activityMap.get(date)
             if (data) {
@@ -189,7 +189,7 @@ export const useAppStore = create<AppState & AppActions>()(
             }
           })
 
-          commentsRes.data?.forEach(comment => {
+          commentsRes.data?.forEach((comment: { created_at: string }) => {
             const date = new Date(comment.created_at).toISOString().split('T')[0]
             const data = activityMap.get(date)
             if (data) {
@@ -198,7 +198,7 @@ export const useAppStore = create<AppState & AppActions>()(
             }
           })
 
-          votesRes.data?.forEach(vote => {
+          votesRes.data?.forEach((vote: { voted_at: string }) => {
             const date = new Date(vote.voted_at).toISOString().split('T')[0]
             const data = activityMap.get(date)
             if (data) {

@@ -12,14 +12,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/lib/utils/utils'
 import { passwordConfirmationSchema, PASSWORD_REQUIREMENTS, type PasswordConfirmationInputs } from '@/lib/utils/validation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 export default function ResetPassword() {
   const [isResetting, setIsResetting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   
   const isVerified = searchParams.get('verified') === 'true'
   

@@ -1,8 +1,8 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { validatePassword, validatePasswordConfirmation } from '@/lib/utils/validation'
 
-const supabase = createClientComponentClient()
+const supabase = createSupabaseClient()
 
 interface PasswordResetOptions {
   email: string
@@ -18,7 +18,7 @@ interface UpdatePasswordOptions {
 export const authService = {
   async sendPasswordResetEmail({ email }: PasswordResetOptions) {
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/auth/callback?type=recovery`
@@ -126,7 +126,7 @@ export const authService = {
 
   async signInWithGoogle() {
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

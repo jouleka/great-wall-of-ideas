@@ -1,38 +1,34 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { updateSession } from '@/lib/supabase/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
   try {
-    const res = NextResponse.next();
-    const supabase = createMiddlewareClient({ req, res });
-    
     const { pathname } = req.nextUrl;
+    
     if (pathname.startsWith('/_next') || 
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public')) {
-      return res;
+      return NextResponse.next();
     }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { user, response } = await updateSession(req);
 
     if (pathname === '/' || pathname.startsWith('/ideas') && !pathname.includes('/api')) {
-      return res;
+      return response;
     }
 
     if (pathname.match(/^\/api\/ideas\/[^/]+\/comments$/)) {
-      return res;
+      return response;
     }
 
     if (pathname === '/auth/callback' || pathname.includes('/auth/callback')) {
-      return res;
+      return response;
     }
 
     if ((pathname.startsWith('/api/ideas/vote') || 
          pathname.startsWith('/api/ideas/create')) && 
-         !session) {
+         !user) {
       return new NextResponse(
         JSON.stringify({ error: 'Authentication required' }),
         { status: 401, headers: { 'content-type': 'application/json' } }
@@ -44,25 +40,25 @@ export async function middleware(req: NextRequest) {
         const verified = new URL(req.url).searchParams.get('verified')
         
         if (verified === 'true') {
-          return res;
+          return response;
         }
         
         return NextResponse.redirect(new URL('/auth', req.url))
       }
       
-      if (session && !pathname.includes('reset-password')) {
+      if (user && !pathname.includes('reset-password')) {
         return NextResponse.redirect(new URL('/ideas', req.url));
       }
-      return res;
+      return response;
     }
 
-    if (!session) {
+    if (!user) {
       const redirectUrl = new URL('/auth', req.url);
       redirectUrl.searchParams.set('redirectTo', pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
-    return res;
+    return response;
   } catch (error) {
     console.error('Middleware error:', error);
     return NextResponse.redirect(new URL('/auth', req.url));

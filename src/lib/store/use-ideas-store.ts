@@ -5,7 +5,7 @@ import { IdeaStatus } from '@/lib/types/database'
 import { ideaService } from '@/lib/services/idea-service'
 import { voteService } from '@/lib/services/vote-service'
 import { toast } from 'sonner'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface IdeasState {
@@ -196,7 +196,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
 
       handleVote: async (ideaId, voteType) => {
         const state = get()
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
         
         if (!user) {
@@ -274,7 +274,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
       },
 
       createIdea: async (newIdea) => {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
         
         if (!user) {
@@ -313,7 +313,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
       },
 
       deleteIdea: async (ideaId) => {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
         
         if (!user) {
@@ -344,7 +344,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
       },
 
       incrementViews: async (ideaId) => {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         try {
           const { error: viewError } = await supabase.rpc('increment_idea_views', {
             idea_id_input: ideaId
@@ -382,7 +382,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
         const { realtimeChannels } = get()
         if (realtimeChannels[ideaId]) return
 
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         const channel = supabase.channel(`idea:${ideaId}`)
           .on('presence', { event: 'sync' }, () => {
             const state = channel.presenceState()
@@ -416,10 +416,10 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
               viewer_count: viewerCount
             })
           })
-          .on('broadcast', { event: 'engagement' }, ({ payload }) => {
+          .on('broadcast', { event: 'engagement' }, ({ payload }: { payload: { current_viewers: number; engagement_score: number } }) => {
             get().updateEngagement(ideaId, payload)
           })
-          .subscribe(async (status) => {
+          .subscribe(async (status: string) => {
             if (status === 'SUBSCRIBED') {
               await channel.track({
                 user_id: (await supabase.auth.getUser()).data.user?.id,
@@ -578,7 +578,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
             sortType: 'all'
           })
 
-          const supabase = createClientComponentClient()
+          const supabase = createSupabaseClient()
           const subscription = supabase
             .channel('ideas')
             .on(
@@ -588,7 +588,8 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
                 schema: 'public',
                 table: 'ideas'
               },
-              async (payload) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              async (payload: any) => {
                 const newIdea = payload.new as Idea
                 const oldIdea = payload.old as Idea
 

@@ -1,21 +1,27 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { type Database } from '@/lib/types/database'
+import { createBrowserClient } from '@supabase/ssr'
 
 // Ensuring client is only created once in browser
-let supabaseInstance: ReturnType<typeof createClientComponentClient<Database>> | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
 export function createSupabaseClient() {
   if (typeof window === 'undefined') {
-    return createClientComponentClient<Database>()
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
   }
   
   if (!supabaseInstance) {
-    supabaseInstance = createClientComponentClient<Database>()
+    supabaseInstance = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
   }
   return supabaseInstance
 }
 
 export const supabase = createSupabaseClient()
 
-export type SupabaseClient = ReturnType<typeof createClientComponentClient<Database>>
+export type SupabaseClient = ReturnType<typeof createSupabaseClient>
 export type RealtimeChannel = ReturnType<SupabaseClient['channel']>

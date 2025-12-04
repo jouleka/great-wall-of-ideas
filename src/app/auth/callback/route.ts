@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.xyz'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -14,8 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${siteUrl}/auth?error=MissingCode`)
   }
 
-  const cookieStore = cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = await createServerSupabaseClient()
   
   try {
     const { error } = await supabase.auth.exchangeCodeForSession(code)

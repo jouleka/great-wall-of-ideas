@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { voteService } from '@/lib/services/vote-service'
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
@@ -79,7 +79,7 @@ export const useVotesStore = create<VoteState & VoteActions>()(
           }))
 
           try {
-            const supabase = createClientComponentClient()
+            const supabase = createSupabaseClient()
             const [{ data: voteCounts }, userVote] = await Promise.all([
               supabase
                 .from('ideas')
@@ -222,7 +222,7 @@ export const useVotesStore = create<VoteState & VoteActions>()(
       setError: (error) => set({ error }),
 
       subscribeToChanges: (ideaId: string) => {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         
         const channel = supabase.channel(`idea-votes-${ideaId}`)
           .on(

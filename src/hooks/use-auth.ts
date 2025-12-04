@@ -1,10 +1,10 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ExtendedUser } from '../lib/types/auth'
 import useSWR from 'swr'
 
 async function fetchUserAndProfile() {
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   
   const [{ data: { user } }, { data: profiles }] = await Promise.all([
     supabase.auth.getUser(),
@@ -13,12 +13,12 @@ async function fetchUserAndProfile() {
 
   if (!user) return null
 
-  const profile = profiles?.find(p => p.id === user.id)
+  const profile = profiles?.find((p: { id: string }) => p.id === user.id)
   return { ...user, profile } as ExtendedUser
 }
 
 export function useAuth() {
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   const router = useRouter()
 
   const { 

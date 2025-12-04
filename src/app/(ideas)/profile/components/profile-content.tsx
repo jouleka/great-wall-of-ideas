@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { motion } from "framer-motion"
 import { Check, Loader2, ArrowLeft, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
@@ -54,7 +54,7 @@ export function ProfileContent() {
     bio: ''
   })
   
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   const debouncedFormData = useDebounce(formData, 500)
   const router = useRouter()
 
@@ -73,7 +73,7 @@ export function ProfileContent() {
           .from('profiles')
           .select('full_name, username, website, bio')
           .eq('id', user.id)
-          .single()
+          .single<{ full_name: string | null; username: string | null; website: string | null; bio: string | null }>()
         
         if (fetchError) throw fetchError
         

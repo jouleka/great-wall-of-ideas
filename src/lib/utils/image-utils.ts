@@ -1,7 +1,7 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 export async function uploadProfileImage(file: File, userId: string) {
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseClient()
   
   try {
     if (!file.type.startsWith('image/')) {

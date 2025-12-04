@@ -1,4 +1,4 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 const REFRESH_INTERVAL = 4 * 60 * 1000
@@ -25,7 +25,7 @@ export const sessionUtils = {
       }
 
       try {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         const { error } = await supabase.auth.refreshSession()
         if (error) throw error
       } catch (error) {

@@ -8,7 +8,7 @@ import {
   Dumbbell, Apple, Play, Glasses, Ticket, Trophy, Sun, Recycle, Car, Monitor
 } from "lucide-react"
 import { useMemo, useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000
 const MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000
@@ -124,7 +124,7 @@ export function useIdeaIcon(categoryId: string): LucideIcon {
     const fetchCategory = async () => {
       if (!categoryId) return
       
-      const supabase = createClientComponentClient()
+      const supabase = createSupabaseClient()
       const { data: category } = await supabase
         .from('categories')
         .select('slug')

@@ -1,10 +1,8 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from "next/headers"
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 export class CommentLikeService {
   static async getLikeCount(commentId: string): Promise<number> {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await createServerSupabaseClient()
 
     const { count, error } = await supabase
       .from('comment_likes')
@@ -16,8 +14,7 @@ export class CommentLikeService {
   }
 
   static async isLikedByUser(commentId: string, userId: string): Promise<boolean> {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await createServerSupabaseClient()
 
     const { data, error } = await supabase
       .from('comment_likes')
@@ -31,8 +28,7 @@ export class CommentLikeService {
   }
 
   static async addLike(commentId: string, userId: string) {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await createServerSupabaseClient()
 
     // First check if the like already exists
     const { data: existingLike, error: existingError } = await supabase
@@ -67,8 +63,7 @@ export class CommentLikeService {
   }
 
   static async removeLike(commentId: string, userId: string) {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await createServerSupabaseClient()
 
     const { error: deleteError } = await supabase
       .from('comment_likes')

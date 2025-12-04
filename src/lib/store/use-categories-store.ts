@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { type Category, type CategoryWithSubcategories } from '@/lib/types/category'
 import { categoryService } from '@/lib/services/category-service'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 interface CategoriesState {
   categories: CategoryWithSubcategories[]
@@ -173,7 +173,7 @@ export const useCategoriesStore = create<CategoriesState & CategoriesActions>()(
       },
 
       subscribeToChanges: () => {
-        const supabase = createClientComponentClient()
+        const supabase = createSupabaseClient()
         
         const channel = supabase.channel('categories')
           .on('postgres_changes', { 

@@ -1,6 +1,6 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
-const supabase = createClientComponentClient()
+const supabase = createSupabaseClient()
 
 export const voteService = {
   async getCurrentVote(ideaId: string, userId: string) {
