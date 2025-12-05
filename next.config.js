@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow dev server access from localhost (CVE-2025-48068 mitigation)
+  allowedDevOrigins: ['http://localhost:3000'],
+  
   // Optimize package imports to reduce bundle size and build time
   experimental: {
     optimizePackageImports: [
