@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Search, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -120,50 +120,42 @@ export default function GreatWallOfIdeas() {
     handleLoadMore()
   }, [handleLoadMore])
 
-  useEffect(() => {
-    if (!initialized) {
-      resetIdeas()
-    }
-    // No cleanup needed since we want to keep the cache
-  }, [resetIdeas, initialized])
+  // Single effect to handle all filter changes and initialization
+  // Tracks previous values to avoid unnecessary resets
+  const prevFiltersRef = useRef({
+    initialized: false,
+    searchTerm: '',
+    categoryId: null as string | null,
+    subcategoryId: null as string | null
+  })
 
   useEffect(() => {
-    if (debouncedSearchTerm !== searchTerm) {
+    const prev = prevFiltersRef.current
+    const filtersChanged = 
+      prev.searchTerm !== debouncedSearchTerm ||
+      prev.categoryId !== selectedCategoryId ||
+      prev.subcategoryId !== selectedSubcategoryId
+
+    // Reset on first load or when filters actually change
+    if (!initialized || (initialized && filtersChanged)) {
       resetIdeas()
     }
-  }, [debouncedSearchTerm, searchTerm, resetIdeas])
 
-  useEffect(() => {
-    resetIdeas()
-  }, [selectedCategoryId, selectedSubcategoryId, resetIdeas])
+    // Update refs for next comparison
+    prevFiltersRef.current = {
+      initialized,
+      searchTerm: debouncedSearchTerm,
+      categoryId: selectedCategoryId,
+      subcategoryId: selectedSubcategoryId
+    }
+  }, [initialized, debouncedSearchTerm, selectedCategoryId, selectedSubcategoryId, resetIdeas])
 
   const handleIdeaSelection = useCallback((open: boolean) => {
     if (!open) setSelectedIdeaId(null)
   }, [setSelectedIdeaId])
 
-  const filteredIdeas = useMemo(() => {
-    if (!ideas.length) return []
-    
-    let filtered = ideas
-
-    if (debouncedSearchTerm) {
-      const searchLower = debouncedSearchTerm.toLowerCase()
-      filtered = filtered.filter(idea =>
-        idea.title.toLowerCase().includes(searchLower) ||
-        idea.description.toLowerCase().includes(searchLower) ||
-        idea.target_audience.toLowerCase().includes(searchLower)
-      )
-    }
-
-    if (selectedCategoryId) {
-      filtered = filtered.filter(idea => idea.category_id === selectedCategoryId)
-    }
-    if (selectedSubcategoryId) {
-      filtered = filtered.filter(idea => idea.subcategory_id === selectedSubcategoryId)
-    }
-
-    return filtered
-  }, [ideas, debouncedSearchTerm, selectedCategoryId, selectedSubcategoryId])
+  // Server already filters by category, subcategory, and search term via RPC
+  // No need for redundant client-side filtering
 
   return (
     <motion.div 
@@ -287,7 +279,7 @@ export default function GreatWallOfIdeas() {
                     ))}
                   </div>
                 )}
-                {!isLoading && !filteredIdeas.length && (
+                {!isLoading && !ideas.length && (
                   <div className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] text-center px-4">
                     {debouncedSearchTerm ? (
                       <>
@@ -352,9 +344,9 @@ export default function GreatWallOfIdeas() {
                   </div>
                 )}
                 
-                {!isLoading && filteredIdeas.length > 0 && (
+                {!isLoading && ideas.length > 0 && (
                   <div className={`grid gap-3 sm:gap-4 ${GRID_LAYOUTS.sm} sm:${GRID_LAYOUTS.md} lg:${GRID_LAYOUTS.lg} xl:${GRID_LAYOUTS.xl}`}>
-                    {filteredIdeas.map((idea) => (
+                    {ideas.map((idea) => (
                       <div key={idea.id} data-idea-id={idea.id}>
                         <IdeaCard 
                           idea={idea}

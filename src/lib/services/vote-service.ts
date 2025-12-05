@@ -1,9 +1,8 @@
 import { createSupabaseClient } from '@/lib/supabase/client'
 
-const supabase = createSupabaseClient()
-
 export const voteService = {
   async getCurrentVote(ideaId: string, userId: string) {
+    const supabase = createSupabaseClient()
     try {
       const { data } = await supabase
         .from('votes')
@@ -20,6 +19,7 @@ export const voteService = {
   },
 
   async handleVote(ideaId: string, userId: string, voteType: 'upvote' | 'downvote') {
+    const supabase = createSupabaseClient()
     try {
       const { data, error } = await supabase.rpc('handle_vote', {
         p_idea_id: ideaId,

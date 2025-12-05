@@ -1,8 +1,6 @@
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-const supabase = createSupabaseClient()
-
 interface ProfileData {
   username: string
   full_name?: string
@@ -12,6 +10,7 @@ interface ProfileData {
 
 export const profileService = {
   async updateProfile(userId: string, data: ProfileData) {
+    const supabase = createSupabaseClient()
     try {
       const { error } = await supabase
         .from('profiles')

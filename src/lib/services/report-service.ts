@@ -1,8 +1,6 @@
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-const supabase = createSupabaseClient()
-
 export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other'
 
 interface BaseReportData {
@@ -24,6 +22,7 @@ type ReportData = CommentReportData | IdeaReportData
 
 export const reportService = {
   async reportItem(data: ReportData) {
+    const supabase = createSupabaseClient()
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
@@ -63,6 +62,7 @@ export const reportService = {
   },
 
   async getUserReports() {
+    const supabase = createSupabaseClient()
     try {
       const { data: { session } } = await supabase.auth.getSession()
       

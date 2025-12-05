@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/app/(auth)/auth/components/auth-provider"
 import { ThemeProvider } from "next-themes"
 import { RootLayoutContent } from "@/components/root-layout-content"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -83,12 +84,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <RootLayoutContent>
-              {children}
-            </RootLayoutContent>
-            <Toaster />
-          </AuthProvider>
+          <TooltipProvider>
+            <AuthProvider>
+              <RootLayoutContent>
+                {children}
+              </RootLayoutContent>
+              <Toaster />
+            </AuthProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

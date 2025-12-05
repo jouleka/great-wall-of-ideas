@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useIdeasStore } from '@/lib/store/use-ideas-store'
 import { useCategoriesStore } from '@/lib/store/use-categories-store'
 import { useStatsStore } from '@/lib/store/use-stats-store'
+import { useVotesStore } from '@/lib/store/use-votes-store'
 
 export function useInitStore() {
   const initialized = useRef(false)
@@ -14,6 +15,7 @@ export function useInitStore() {
 
   const subscribeToCategories = useCategoriesStore(state => state.subscribeToChanges)
   const subscribeToStats = useStatsStore(state => state.subscribeToChanges)
+  const subscribeToVotes = useVotesStore(state => state.subscribeToVoteChanges)
 
   useEffect(() => {
     if (initialized.current) return
@@ -47,7 +49,8 @@ export function useInitStore() {
     try {
       cleanupFunctions.push(
         subscribeToCategories(),
-        subscribeToStats()
+        subscribeToStats(),
+        subscribeToVotes() // Single global subscription for all vote changes
       )
     } catch (error) {
       console.error('Failed to set up subscriptions:', error)
@@ -63,6 +66,7 @@ export function useInitStore() {
     initializeCategories,
     initializeStats,
     subscribeToCategories,
-    subscribeToStats
+    subscribeToStats,
+    subscribeToVotes
   ])
-} 
+}

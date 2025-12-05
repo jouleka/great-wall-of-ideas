@@ -2,8 +2,6 @@ import { createSupabaseClient } from '@/lib/supabase/client'
 import { type Notification, type NotificationType } from '@/lib/types/notification'
 import { type RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
-const supabase = createSupabaseClient()
-
 const VALID_NOTIFICATION_TYPES: NotificationType[] = [
   'new_comment',
   'comment_reply',
@@ -32,6 +30,7 @@ function isValidNotification(obj: unknown): obj is Notification {
 
 export const notificationService = {
   async getNotifications(): Promise<Notification[]> {
+    const supabase = createSupabaseClient()
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -43,6 +42,7 @@ export const notificationService = {
   },
 
   async getUnreadCount(): Promise<number> {
+    const supabase = createSupabaseClient()
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
@@ -53,6 +53,7 @@ export const notificationService = {
   },
 
   async markAsRead(notificationIds: string[]): Promise<void> {
+    const supabase = createSupabaseClient()
     const { error } = await supabase
       .rpc('mark_notifications_as_read', {
         p_notification_ids: notificationIds,
@@ -62,6 +63,7 @@ export const notificationService = {
   },
 
   async markAllAsRead(): Promise<void> {
+    const supabase = createSupabaseClient()
     const { error } = await supabase
       .rpc('mark_all_notifications_as_read')
 
@@ -69,6 +71,7 @@ export const notificationService = {
   },
 
   subscribeToNotifications(userId: string, callback: (notification: Notification) => void) {
+    const supabase = createSupabaseClient()
     return supabase
       .channel('notifications')
       .on(

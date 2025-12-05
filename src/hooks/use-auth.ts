@@ -1,37 +1,21 @@
-import { createSupabaseClient } from '@/lib/supabase/client'
+'use client'
+
+import { useAppStore } from '@/lib/store/use-app-store'
 import { useRouter } from 'next/navigation'
 import { ExtendedUser } from '../lib/types/auth'
-import useSWR from 'swr'
 
-async function fetchUserAndProfile() {
-  const supabase = createSupabaseClient()
-  
-  const [{ data: { user } }, { data: profiles }] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.from('profiles').select('*')
-  ])
-
-  if (!user) return null
-
-  const profile = profiles?.find((p: { id: string }) => p.id === user.id)
-  return { ...user, profile } as ExtendedUser
-}
-
+/**
+ * Thin wrapper around useAppStore for auth functionality.
+ * This hook provides a consistent interface for components that need auth state.
+ * All auth state is managed by useAppStore - this just exposes it.
+ */
 export function useAuth() {
-  const supabase = createSupabaseClient()
   const router = useRouter()
-
-  const { 
-    data: user, 
-    error, 
-    isLoading, 
-    mutate 
-  } = useSWR<ExtendedUser | null>('auth-user', fetchUserAndProfile)
+  const { user, loading, signOut: storeSignOut, refreshSession } = useAppStore()
 
   async function signOut() {
     try {
-      await supabase.auth.signOut()
-      await mutate(null, false)
+      await storeSignOut()
       router.refresh()
       router.push('/auth')
     } catch (error) {
@@ -40,10 +24,10 @@ export function useAuth() {
   }
 
   return { 
-    user, 
-    isLoading, 
-    isError: error,
+    user: user as ExtendedUser | null, 
+    isLoading: loading, 
+    isError: null,
     signOut,
-    refreshUser: () => mutate()
+    refreshUser: refreshSession
   }
 }

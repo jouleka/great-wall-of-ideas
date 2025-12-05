@@ -17,7 +17,7 @@ import { VoteIndicator } from "./vote-indicator"
 import { VoteButtons } from "./vote-buttons"
 import DOMPurify from 'dompurify'
 import { ShareButton } from "./share-button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { ReportDialog } from '@/components/report-dialog'
 import { useIdeasStore } from '@/lib/store/use-ideas-store'
@@ -205,12 +205,7 @@ const StatusBadge = ({ status }: { status: IdeaStatus }) => {
 }
 
 const RemixIndicator = ({ remixedFromId }: { remixedFromId: string | null }) => {
-  console.log('🎯 RemixIndicator rendered with remixedFromId:', remixedFromId)
-  
-  if (!remixedFromId) {
-    console.log('❌ No remixedFromId provided, not rendering RemixIndicator')
-    return null
-  }
+  if (!remixedFromId) return null
 
   return (
     <div className="flex items-center gap-1">
@@ -292,16 +287,14 @@ const MakePublicButton = ({ idea, size = 'default' }: { idea: Idea, size?: 'defa
             size === 'lg' ? "h-8 w-8" : "h-7 w-7"
           )}
         >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Lock className={size === 'lg' ? "h-4 w-4" : "h-3.5 w-3.5"} />
-              </TooltipTrigger>
-              <TooltipContent>
-                {idea.is_private ? "Make idea public" : "Private idea"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Lock className={size === 'lg' ? "h-4 w-4" : "h-3.5 w-3.5"} />
+            </TooltipTrigger>
+            <TooltipContent>
+              {idea.is_private ? "Make idea public" : "Private idea"}
+            </TooltipContent>
+          </Tooltip>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -326,7 +319,7 @@ const MakePublicButton = ({ idea, size = 'default' }: { idea: Idea, size?: 'defa
 }
 
 const IdeaCard = memo(({
-  idea: initialIdea,
+  idea,
   size = 'default',
   isOpen,
   onOpenChange,
@@ -334,30 +327,28 @@ const IdeaCard = memo(({
   const { user } = useAuth()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [idea, setIdea] = useState(initialIdea)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [isTitleExpanded, setIsTitleExpanded] = useState(false)
   const { deleteIdea, incrementViews } = useIdeasStore()
-  const { handleVote, votes, userVotes } = useVotesStore()
+  const { handleVote, votes, userVotes, initializeForIdea } = useVotesStore()
 
   const IconComponent = useIdeaIcon(idea.category_id)
+  
+  // Get vote counts from store (synced from ideas or updated via voting)
+  const voteCounts = votes[idea.id] || { upvotes: idea.upvotes || 0, downvotes: idea.downvotes || 0 }
+
+  // Initialize user's vote status for this idea
+  useEffect(() => {
+    if (user?.id) {
+      initializeForIdea(idea.id, user.id)
+    }
+  }, [idea.id, user?.id, initializeForIdea])
 
   useEffect(() => {
     if (isOpen !== undefined) {
       setIsDialogOpen(isOpen)
     }
   }, [isOpen])
-
-  useEffect(() => {
-    const currentVotes = votes[idea.id]
-    if (currentVotes) {
-      setIdea(prev => ({
-        ...prev,
-        upvotes: currentVotes.upvotes,
-        downvotes: currentVotes.downvotes
-      }))
-    }
-  }, [votes, idea.id])
 
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open)
@@ -372,18 +363,10 @@ const IdeaCard = memo(({
   const handleExploreClick = useCallback(async () => {
     try {
       await incrementViews(idea.id)
-      setIdea(prev => ({
-        ...prev,
-        views: (prev.views || 0) + 1
-      }))
     } catch (error) {
       console.error('Error in handleExploreClick:', error)
     }
   }, [idea.id, incrementViews])
-
-  useEffect(() => {
-    setIdea(initialIdea)
-  }, [initialIdea])
 
   const DeleteButton = () => (
     <AlertDialog>
@@ -472,14 +455,12 @@ const IdeaCard = memo(({
                       {user?.id === idea.user_id ? (
                         <MakePublicButton idea={idea} />
                       ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Lock className="w-3 h-3 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>Private idea</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Lock className="w-3 h-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>Private idea</TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </>
@@ -557,53 +538,49 @@ const IdeaCard = memo(({
               <IconComponent className="w-5 h-5 text-primary" />
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleVote(idea.id, user?.id || '', 'upvote')}
-                      disabled={!user}
-                      className={cn(
-                        "h-8 w-8 p-0",
-                        userVotes[idea.id] === 'upvote' && "bg-green-100 text-green-700 hover:bg-green-200"
-                      )}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {user ? "Support this idea" : "Sign in to vote"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleVote(idea.id, user?.id || '', 'upvote')}
+                    disabled={!user}
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      userVotes[idea.id] === 'upvote' && "bg-green-100 text-green-700 hover:bg-green-200"
+                    )}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {user ? "Support this idea" : "Sign in to vote"}
+                </TooltipContent>
+              </Tooltip>
 
               <span className="text-sm font-medium min-w-[1.5rem] text-center">
-                {(idea.upvotes || 0) - (idea.downvotes || 0)}
+                {voteCounts.upvotes - voteCounts.downvotes}
               </span>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleVote(idea.id, user?.id || '', 'downvote')}
-                      disabled={!user}
-                      className={cn(
-                        "h-8 w-8 p-0",
-                        userVotes[idea.id] === 'downvote' && "bg-red-100 text-red-700 hover:bg-red-200"
-                      )}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {user ? "Withdraw support" : "Sign in to vote"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleVote(idea.id, user?.id || '', 'downvote')}
+                    disabled={!user}
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      userVotes[idea.id] === 'downvote' && "bg-red-100 text-red-700 hover:bg-red-200"
+                    )}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {user ? "Withdraw support" : "Sign in to vote"}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
@@ -615,7 +592,7 @@ const IdeaCard = memo(({
                 <h3 className="text-base font-semibold leading-tight line-clamp-2 group-hover:text-primary/90 transition-colors">
                   {idea.title}
                 </h3>
-                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-sm text-mutexd-foreground">
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-sm text-muted-foreground">
                   <span className="truncate">{idea.author_name}</span>
                   <span>•</span>
                   <PopularityMeter idea={idea} />
@@ -628,14 +605,12 @@ const IdeaCard = memo(({
                             {user?.id === idea.user_id ? (
                               <MakePublicButton idea={idea} size="lg" />
                             ) : (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Lock className="w-3 h-3" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>Private idea</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Lock className="w-3 h-3" />
+                                </TooltipTrigger>
+                                <TooltipContent>Private idea</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         )}
@@ -776,14 +751,12 @@ const IdeaCard = memo(({
                     {user?.id === idea.user_id ? (
                       <MakePublicButton idea={idea} />
                     ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Lock className="w-3 h-3" />
-                          </TooltipTrigger>
-                          <TooltipContent>Private idea</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Lock className="w-3 h-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>Private idea</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 )}
@@ -920,14 +893,12 @@ const IdeaCard = memo(({
                           {user?.id === idea.user_id ? (
                             <MakePublicButton idea={idea} size="lg" />
                           ) : (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Lock className="w-4 h-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>Private idea</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Lock className="w-4 h-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>Private idea</TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                       )}

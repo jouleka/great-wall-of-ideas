@@ -3,7 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User } from '@supabase/supabase-js'
-import * as authService from '@/lib/services/auth'
+import * as authService from '@/lib/services/auth-service'
 import { Database } from '@/lib/types/database'
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { ActivityData } from '@/hooks/use-activity-data'

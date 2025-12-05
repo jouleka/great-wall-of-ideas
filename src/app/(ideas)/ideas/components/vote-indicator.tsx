@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useEffect } from 'react'
+import { memo } from 'react'
 import { cn } from "@/lib/utils/utils"
 import { Flame, TrendingUp, Award } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -19,19 +19,13 @@ const VoteIndicator = memo(({
   showTrend = false,
   className
 }: VoteIndicatorProps) => {
-  const { votes, initialize, subscribeToChanges } = useVotesStore()
+  // Just read from store - no subscriptions, no initialization
+  // Vote counts are synced when ideas are loaded and updated via global subscription
+  const votes = useVotesStore(state => state.votes)
   const voteCounts = votes[ideaId] || { upvotes: 0, downvotes: 0 }
   const { upvotes, downvotes } = voteCounts
   const netVotes = upvotes - downvotes
   const isTrending = netVotes > 5
-
-  useEffect(() => {
-    initialize(ideaId, null)
-    const unsubscribe = subscribeToChanges(ideaId)
-    return () => {
-      unsubscribe()
-    }
-  }, [ideaId, initialize, subscribeToChanges])
   
   const getBadgeStatus = () => {
     if (netVotes >= 100) return { text: "Community Favorite 🏆", icon: Award }
@@ -94,4 +88,4 @@ const VoteIndicator = memo(({
 
 VoteIndicator.displayName = 'VoteIndicator'
 
-export { VoteIndicator } 
+export { VoteIndicator }

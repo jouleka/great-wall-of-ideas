@@ -3,10 +3,24 @@ import { persist } from 'zustand/middleware'
 import { Idea } from '@/lib/types/idea'
 import { IdeaStatus } from '@/lib/types/database'
 import { ideaService } from '@/lib/services/idea-service'
-import { voteService } from '@/lib/services/vote-service'
 import { toast } from 'sonner'
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { useAppStore } from './use-app-store'
+
+// Helper to sync vote counts to votes store (avoids circular import at module level)
+const syncVotesToStore = (ideas: Idea[]) => {
+  // Dynamic import to avoid circular dependency during module initialization
+  import('./use-votes-store').then(({ useVotesStore }) => {
+    const { syncFromIdea } = useVotesStore.getState()
+    ideas.forEach(idea => {
+      syncFromIdea(idea.id, idea.upvotes || 0, idea.downvotes || 0)
+    })
+  })
+}
+
+// Helper to get current user from app store (avoids repeated API calls)
+const getCurrentUser = () => useAppStore.getState().user
 
 interface IdeasState {
   ideas: Idea[]
@@ -25,8 +39,6 @@ interface IdeasState {
   pendingRequests: Record<string, Promise<void> | undefined>
   realtimeChannels: Record<string, RealtimeChannel>
   activeViewers: Record<string, number>
-  featuredIdeas: Idea[]
-  subscription: RealtimeChannel | null
 }
 
 interface IdeasActions {
@@ -39,7 +51,6 @@ interface IdeasActions {
   loadIdeas: (page?: number) => Promise<void>
   loadMore: () => Promise<void>
   resetIdeas: () => void
-  handleVote: (ideaId: string, voteType: 'upvote' | 'downvote') => Promise<void>
   createIdea: (newIdea: Omit<Idea, "id" | "created_at" | "updated_at" | "upvotes" | "downvotes" | "views">) => Promise<void>
   deleteIdea: (ideaId: string) => Promise<boolean>
   incrementViews: (ideaId: string) => Promise<void>
@@ -51,11 +62,9 @@ interface IdeasActions {
   addIdea: (idea: Idea) => void
   updateIdea: (ideaId: string, updatedIdea: Idea) => void
   removeIdea: (ideaId: string) => void
-  initialize: (userId: string) => Promise<void>
 }
 
 const CACHE_DURATION = 5 * 60 * 1000
-const DEDUPE_DURATION = 2 * 1000
 
 export const useIdeasStore = create<IdeasState & IdeasActions>()(
   persist(
@@ -76,8 +85,6 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
       pendingRequests: {},
       realtimeChannels: {},
       activeViewers: {},
-      featuredIdeas: [],
-      subscription: null,
 
       setIdeas: (ideas) => set({ ideas }),
       setSortType: (sortType) => {
@@ -97,7 +104,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
 
         // Return existing promise if one is in progress (request deduplication)
         const pendingRequest = state.pendingRequests[cacheKey]
-        if (pendingRequest && now - (state.lastFetch[cacheKey] || 0) < DEDUPE_DURATION) {
+        if (pendingRequest) {
           return pendingRequest
         }
 
@@ -132,6 +139,9 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
               searchTerm: state.searchTerm
             })
             
+            // Sync vote counts to votes store
+            syncVotesToStore(data)
+
             set(state => {
               const existingIds = new Set(state.ideas.map((idea: Idea) => idea.id))
               const newIdeas = data.filter((idea: Idea) => !existingIds.has(idea.id))
@@ -194,88 +204,8 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
         get().loadIdeas(0)
       },
 
-      handleVote: async (ideaId, voteType) => {
-        const state = get()
-        const supabase = createSupabaseClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          toast.error("Please sign in to vote", {
-            action: {
-              label: "Sign In",
-              onClick: () => window.location.href = '/auth?redirectTo=/ideas'
-            }
-          })
-          return
-        }
-
-        const ideaStateBeforeVote = [...state.ideas]
-        const idea = state.ideas.find(i => i.id === ideaId)
-        if (!idea) return
-
-        try {
-          const currentVote = await voteService.getCurrentVote(ideaId, user.id)
-          const isRemovingVote = currentVote === voteType
-          const isChangingVote = currentVote && currentVote !== voteType
-
-          set(state => ({
-            ideas: state.ideas.map(i => {
-              if (i.id !== ideaId) return i
-              return {
-                ...i,
-                upvotes: voteType === 'upvote' 
-                  ? i.upvotes + (isRemovingVote ? -1 : 1) - (isChangingVote && currentVote === 'upvote' ? 1 : 0)
-                  : i.upvotes - (isChangingVote && currentVote === 'upvote' ? 1 : 0),
-                downvotes: voteType === 'downvote'
-                  ? i.downvotes + (isRemovingVote ? -1 : 1) - (isChangingVote && currentVote === 'downvote' ? 1 : 0)
-                  : i.downvotes - (isChangingVote && currentVote === 'downvote' ? 1 : 0)
-              }
-            })
-          }))
-
-          const result = await voteService.handleVote(ideaId, user.id, voteType)
-          
-          if (!result.success) {
-            set({ ideas: ideaStateBeforeVote })
-            toast.error(result.message)
-            return
-          }
-
-          set(state => ({
-            ideas: state.ideas.map(i => 
-              i.id === ideaId
-                ? { ...i, upvotes: result.upvotes, downvotes: result.downvotes }
-                : i
-            )
-          }))
-
-          // Reload ideas if we're in top tab to maintain correct order
-          if (state.sortType === 'top') {
-            get().resetIdeas()
-          }
-
-          const { realtimeChannels } = get()
-          if (realtimeChannels[ideaId]) {
-            realtimeChannels[ideaId].send({
-              type: 'broadcast',
-              event: 'engagement',
-              payload: {
-                last_interaction_at: new Date().toISOString(),
-                engagement_score: result.upvotes - result.downvotes
-              }
-            })
-          }
-
-        } catch (error) {
-          console.error('Error voting:', error)
-          set({ ideas: ideaStateBeforeVote })
-          toast.error("Failed to register vote")
-        }
-      },
-
       createIdea: async (newIdea) => {
-        const supabase = createSupabaseClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = getCurrentUser()
         
         if (!user) {
           toast.error("Please sign in to create an idea")
@@ -283,16 +213,13 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
         }
 
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', user.id)
-            .single()
-
+          // Use profile from user object if available, otherwise fetch
+          const username = user.profile?.username
+          
           await ideaService.createIdea({
             ...newIdea,
             user_id: user.id,
-            author_name: newIdea.is_anonymous ? 'Anonymous' : (profile?.username || 'Unknown')
+            author_name: newIdea.is_anonymous ? 'Anonymous' : (username || 'Unknown')
           })
 
           get().resetIdeas()
@@ -313,8 +240,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
       },
 
       deleteIdea: async (ideaId) => {
-        const supabase = createSupabaseClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = getCurrentUser()
         
         if (!user) {
           toast.error("Please sign in to delete your idea")
@@ -322,6 +248,7 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
         }
 
         try {
+          const supabase = createSupabaseClient()
           const { error } = await supabase
             .from('ideas')
             .delete()
@@ -421,8 +348,9 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
           })
           .subscribe(async (status: string) => {
             if (status === 'SUBSCRIBED') {
+              const user = getCurrentUser()
               await channel.track({
-                user_id: (await supabase.auth.getUser()).data.user?.id,
+                user_id: user?.id,
                 online_at: new Date().toISOString(),
               })
             }
@@ -568,66 +496,6 @@ export const useIdeasStore = create<IdeasState & IdeasActions>()(
         set(state => ({
           ideas: state.ideas.filter(idea => idea.id !== ideaId)
         }))
-      },
-
-      initialize: async (userId: string) => {
-        set({ isLoading: true })
-        try {
-          const { data: ideas } = await ideaService.getIdeas({
-            page: 0,
-            sortType: 'all'
-          })
-
-          const supabase = createSupabaseClient()
-          const subscription = supabase
-            .channel('ideas')
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'ideas'
-              },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              async (payload: any) => {
-                const newIdea = payload.new as Idea
-                const oldIdea = payload.old as Idea
-
-                const state = get()
-                const isMyIdea = newIdea.user_id === userId
-                const isMyIdeasTab = state.sortType === 'my_ideas'
-                const shouldShowIdea = !newIdea.is_private || isMyIdea || (isMyIdeasTab && isMyIdea)
-
-                if (shouldShowIdea) {
-                  switch (payload.eventType) {
-                    case 'INSERT':
-                      get().addIdea(newIdea)
-                      break
-                    case 'UPDATE':
-                      get().updateIdea(newIdea.id, newIdea)
-                      break
-                    case 'DELETE':
-                      get().removeIdea(oldIdea.id)
-                      break
-                  }
-                } else {
-                  if (oldIdea && !oldIdea.is_private && newIdea.is_private && !isMyIdea) {
-                    get().removeIdea(newIdea.id)
-                  }
-                }
-              }
-            )
-            .subscribe()
-
-          set({
-            ideas,
-            subscription,
-            isLoading: false
-          })
-        } catch (error) {
-          console.error('Error initializing ideas store:', error)
-          set({ error: error as Error, isLoading: false })
-        }
       }
     }),
     {
