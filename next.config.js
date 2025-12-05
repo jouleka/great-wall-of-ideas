@@ -1,5 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimize package imports to reduce bundle size and build time
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'framer-motion',
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@tiptap/extension-link',
+      '@tiptap/extension-placeholder',
+      '@tiptap/extension-character-count',
+      'date-fns',
+    ],
+  },
+  
   images: {
     remotePatterns: [
       {
@@ -10,6 +25,19 @@ const nextConfig = {
       },
     ],
   },
+
+  // Reduce build output and disable source maps in production for faster builds
+  productionBrowserSourceMaps: false,
+  
+  // Skip TypeScript errors during build (type checking done separately)
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  
+  // Skip ESLint during build (linting done separately)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig
