@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && opennextjs-cloudflare build",
+    "build": "opennextjs-cloudflare build",
     "build:next": "next build",
     "build:worker": "opennextjs-cloudflare build",
     "preview": "wrangler pages dev .open-next/assets --compatibility-flag=nodejs_compat",
