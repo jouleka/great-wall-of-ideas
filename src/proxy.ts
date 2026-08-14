@@ -2,11 +2,11 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   try {
     const { pathname } = req.nextUrl;
-    
-    if (pathname.startsWith('/_next') || 
+
+    if (pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public')) {
       return NextResponse.next();
@@ -26,8 +26,8 @@ export async function middleware(req: NextRequest) {
       return response;
     }
 
-    if ((pathname.startsWith('/api/ideas/vote') || 
-         pathname.startsWith('/api/ideas/create')) && 
+    if ((pathname.startsWith('/api/ideas/vote') ||
+         pathname.startsWith('/api/ideas/create')) &&
          !user) {
       return new NextResponse(
         JSON.stringify({ error: 'Authentication required' }),
@@ -37,15 +37,15 @@ export async function middleware(req: NextRequest) {
 
     if (pathname.startsWith('/auth')) {
       if (pathname === '/auth/reset-password') {
-        const verified = new URL(req.url).searchParams.get('verified')
-        
+        const verified = new URL(req.url).searchParams.get('verified');
+
         if (verified === 'true') {
           return response;
         }
-        
-        return NextResponse.redirect(new URL('/auth', req.url))
+
+        return NextResponse.redirect(new URL('/auth', req.url));
       }
-      
+
       if (user && !pathname.includes('reset-password')) {
         return NextResponse.redirect(new URL('/ideas', req.url));
       }
@@ -60,7 +60,7 @@ export async function middleware(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Middleware error:', error);
+    console.error('Proxy error:', error);
     return NextResponse.redirect(new URL('/auth', req.url));
   }
 }

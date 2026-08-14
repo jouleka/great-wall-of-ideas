@@ -37,10 +37,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   
-  // Skip ESLint during build (linting done separately)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 }
 
 module.exports = nextConfig

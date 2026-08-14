@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 export function useIntersection(
-  elementRef: React.RefObject<Element>,
+  elementRef: React.RefObject<Element | null>,
   options: IntersectionObserverInit = { threshold: 0.5 }
 ) {
   const [isIntersecting, setIsIntersecting] = useState(false)
@@ -22,4 +22,4 @@ export function useIntersection(
   }, [elementRef, options])
 
   return isIntersecting
-} 
+}
