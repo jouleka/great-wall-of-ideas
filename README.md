@@ -1,99 +1,106 @@
-# Great Wall of Ideas 🧱💡
+# Great Wall of Ideas
 
-A fun small platform for sharing and discussing random innovative ideas. Inspiration came from subreddits on Reddit where people post a lot of random ideas on different topics so thought why not have them all in one place. It enables users to share their creative thoughts, collaborate with others, and build upon existing ideas. If you want to see the live site, you can visit https://greatwallofideas.com
+**Publish the rough idea. Find the people who can make it better.**
 
-## ✨ Features
+Great Wall of Ideas is a community product for sharing unfinished ideas,
+discovering what resonates, discussing the details, and branching an existing
+idea into a remix. It treats an idea as the beginning of a conversation—not a
+polished pitch that must already have every answer.
 
-- **🔐 Secure Authentication**
-  - Email & Password
-  - Google OAuth
-  - Protected Routes & Resources
+[Open the live product](https://greatwallofideas.com) ·
+[Browse the source](https://github.com/jouleka/great-wall-of-ideas)
 
-- **💡 Idea Management**
-  - Create and Share Ideas
-  - Rich Text Editor
-  - Categories & Tags
-  - Image Uploads
+## The product loop
 
-- **👥 Collaboration**
-  - Real-time Comments
-  - Idea Remixes
-  - Collaborative Editing
-  - Notifications
-  - Activity Graph
-  - Vote System
+1. **Publish** — write with a rich-text editor, then choose a category and
+   tags that make the idea discoverable.
+2. **Discover** — browse categories, search the wall, or sort by recent,
+   popular, and trending activity.
+3. **Discuss** — vote, comment, reply, and receive realtime notifications.
+4. **Remix** — fork someone else's thought into a new idea while preserving
+   the relationship to its origin.
 
-- **🎯 Discovery**
-  - Advanced Search
-  - Category Browsing
-  - Trending Ideas
-  - Personalized Feed
+## What is implemented
 
-- **📱 User Experience**
-  - Responsive Design
-  - Dark/Light Mode
-  - Real-time Updates
-  - Intuitive Navigation
+| Area | Capabilities |
+|---|---|
+| Identity | Email/password authentication, Google OAuth, public profiles and avatars |
+| Publishing | Rich text, categories, tags, anonymous posting, idea status |
+| Community | Votes, nested comments, comment likes, reports, notifications |
+| Discovery | Search, category browsing, trending ranking, personalized feeds |
+| Remix graph | Idea remixes, origin links, remix history and counts |
+| Experience | Responsive UI, dark/light themes, realtime updates |
 
-## 🛠️ Tech Stack
+## Architecture
 
-- **Frontend**
-  - [Next.js 14](https://nextjs.org/) - React Framework with App Router
-  - [TypeScript](https://www.typescriptlang.org/) - Type Safety
-  - [Tailwind CSS](https://tailwindcss.com/) - Styling
-  - [Shadcn/UI](https://ui.shadcn.com/) - UI Components
-  - [Framer Motion](https://www.framer.com/motion/) - Animations
+```text
+Next.js App Router
+├── server and client product flows
+├── Supabase Auth
+├── PostgreSQL + row-level security
+├── Realtime notifications
+├── Storage-backed uploads
+└── OpenNext deployment on Cloudflare
+```
 
-- **Backend & Database**
-  - [Supabase](https://supabase.com/) - Backend as a Service
-  - PostgreSQL - Database
-  - Row Level Security - Data Protection
+The database behavior is versioned in `supabase/migrations`, including tables,
+indexes, triggers, notification functions, ranking queries, and row-level
+security policies. The frontend uses typed service and store layers rather
+than calling Supabase directly from every component.
 
-- **State Management & Data Fetching**
-  - [SWR](https://swr.vercel.app/) - Data Fetching
-  - [React Hook Form](https://react-hook-form.com/) - Form Management
-  - [Zod](https://zod.dev/) - Schema Validation
+## Stack
 
-## 🚀 Getting Started
+- Next.js 16, React 19, and TypeScript
+- Supabase Auth, PostgreSQL, Realtime, and Storage
+- Tailwind CSS, Radix primitives, and shadcn/ui
+- TipTap for rich-text editing
+- SWR and Zustand for client data/state
+- React Hook Form and Zod for forms and validation
+- OpenNext and Wrangler for Cloudflare deployment
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/great-wall-of-ideas.git
-   cd great-wall-of-ideas
-   ```
+## Run locally
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+Requirements: Node.js 20+ and a Supabase project.
 
-3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in your Supabase credentials
+```bash
+git clone https://github.com/jouleka/great-wall-of-ideas.git
+cd great-wall-of-ideas
+npm ci
+cp .env.example .env.local
+npm run dev
+```
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+Open <http://localhost:3000>.
 
-5. **Open [http://localhost:3000](http://localhost:3000)**
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe anonymous key; RLS still applies |
+| `NEXT_PUBLIC_SITE_URL` | Application origin used for auth redirects |
 
-## 🔧 Environment Setup
+Apply the SQL files in `supabase/migrations` to the target Supabase project
+before exercising authenticated product flows.
 
-Copy the `.env.example` file and fill in your credentials:
-- Supabase Project URL
-- Supabase Anon Key
-- Database URL
-- Site URL
+## Verify
 
-## 🤝 Contributing
+```bash
+npm run lint
+npm run build
+```
 
-Contributions are welcome!
+## Cloudflare deployment
 
-## 📝 License
+The repository includes OpenNext and Wrangler configuration:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```bash
+npm run build:cloudflare
+npm run preview
+npm run deploy
+```
 
----
+Keep production credentials in Cloudflare/Supabase configuration. Do not add
+service-role keys or local environment files to Git.
 
-Made as a fun little project to see what ideas people have.
+## License
+
+[MIT](LICENSE)
