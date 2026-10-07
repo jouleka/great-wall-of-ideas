@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { safeRedirectPath } from '@/lib/utils/redirect-utils'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const token_hash = requestUrl.searchParams.get('token_hash')
   const type = requestUrl.searchParams.get('type')
-  const redirectUrl = requestUrl.searchParams.get('redirectUrl') || '/auth'
+  const redirectUrl = safeRedirectPath(requestUrl.searchParams.get('redirectUrl'), '/auth')
 
   if (!token_hash) {
     return NextResponse.redirect(`${SITE_URL}/auth?error=InvalidLink`)
@@ -51,9 +52,11 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${SITE_URL}/auth?error=InvalidSignupLink`)
     }
 
-    return NextResponse.redirect(`${SITE_URL}${redirectUrl}?verified=true`)
+    const destination = new URL(redirectUrl, SITE_URL)
+    destination.searchParams.set('verified', 'true')
+    return NextResponse.redirect(destination)
   } catch (error) {
     console.error('Verification error:', error)
     return NextResponse.redirect(`${SITE_URL}/auth?error=VerificationError`)
   }
-} 
+}

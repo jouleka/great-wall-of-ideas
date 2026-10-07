@@ -104,6 +104,7 @@ export function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        link: false,
         bulletList: {
           keepMarks: true,
           keepAttributes: false,
@@ -163,7 +164,7 @@ export function RichTextEditor({
 
   useIsomorphicLayoutEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content)
+      editor.commands.setContent(content, { emitUpdate: false })
     }
   }, [content, editor])
 

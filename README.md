@@ -60,7 +60,7 @@ than calling Supabase directly from every component.
 
 ## Run locally
 
-Requirements: Node.js 20+ and a Supabase project.
+Requirements: Node.js 24 and a Supabase project.
 
 ```bash
 git clone https://github.com/jouleka/great-wall-of-ideas.git
@@ -85,6 +85,8 @@ before exercising authenticated product flows.
 
 ```bash
 npm run lint
+npm run test:security
+npm audit --audit-level=low
 npm run build
 ```
 

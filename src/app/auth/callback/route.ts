@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { safeRedirectPath } from '@/lib/utils/redirect-utils'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
 
@@ -7,17 +8,17 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const type = requestUrl.searchParams.get('type')
-  const next = requestUrl.searchParams.get('next') || '/ideas'
+  const next = safeRedirectPath(requestUrl.searchParams.get('next'))
 
   if (!code) {
     return NextResponse.redirect(`${siteUrl}/auth?error=MissingCode`)
   }
 
   const supabase = await createServerSupabaseClient()
-  
+
   try {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (error) {
       console.error('Auth code exchange error:', error)
       return NextResponse.redirect(`${siteUrl}/auth?error=InvalidCode`)
@@ -34,4 +35,4 @@ export async function GET(request: Request) {
     console.error('Auth callback error:', error)
     return NextResponse.redirect(`${siteUrl}/auth?error=AuthCallbackError`)
   }
-} 
+}

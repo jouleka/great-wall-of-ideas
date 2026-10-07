@@ -1,12 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { safeRedirectPath } from '@/lib/utils/redirect-utils'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const token_hash = requestUrl.searchParams.get('token_hash')
   const type = requestUrl.searchParams.get('type')
   const next = requestUrl.searchParams.get('next')
-  const redirectUrl = next ?? '/auth'
+  const redirectUrl = safeRedirectPath(next, '/auth')
 
   if (!token_hash) {
     return NextResponse.redirect(`${requestUrl.origin}/auth?error=InvalidLink`)
@@ -31,5 +32,5 @@ export async function GET(request: Request) {
     )
   }
 
-  return NextResponse.redirect(redirectUrl)
+  return NextResponse.redirect(new URL(redirectUrl, requestUrl.origin))
 }

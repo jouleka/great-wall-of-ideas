@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAppStore } from "@/lib/store/use-app-store"
 import { AuthForm } from "./components/auth-form"
 import { Loading } from "@/components/ui/loading"
+import { safeRedirectPath } from "@/lib/utils/redirect-utils"
 
 export default function AuthPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading } = useAppStore()
-  const redirectTo = searchParams.get('redirectTo') || '/ideas'
+  const redirectTo = safeRedirectPath(searchParams.get('redirectTo'))
 
   useEffect(() => {
     if (!loading && user) {

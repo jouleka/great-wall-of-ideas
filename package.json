@@ -6,14 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "build:cloudflare": "opennextjs-cloudflare build",
-    "preview": "wrangler pages dev .open-next/assets --compatibility-flag=nodejs_compat",
-    "deploy": "wrangler pages deploy .open-next/assets",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:security": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
-    "@opennextjs/cloudflare": "^1.14.3",
+    "@opennextjs/cloudflare": "^1.20.9",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -33,20 +34,20 @@
     "@shadcn/ui": "^0.0.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.45.4",
-    "@tiptap/extension-character-count": "^2.10.3",
-    "@tiptap/extension-link": "^2.10.3",
-    "@tiptap/extension-placeholder": "^2.10.3",
-    "@tiptap/pm": "^2.10.3",
-    "@tiptap/react": "^2.10.3",
-    "@tiptap/starter-kit": "^2.10.3",
+    "@tiptap/extension-character-count": "^3.31.4",
+    "@tiptap/extension-link": "^3.31.4",
+    "@tiptap/extension-placeholder": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dompurify": "^3.3.0",
+    "dompurify": "^3.4.16",
     "framer-motion": "^11.16.4",
     "lucide-react": "^0.447.0",
-    "next": "^16.3.1",
+    "next": "^16.3.8",
     "next-themes": "^0.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -67,11 +68,23 @@
     "@types/react-dom": "^19.2.4",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.1",
+    "eslint-config-next": "^16.3.8",
     "postcss": "^8",
     "supabase": "^2.114.0",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5",
-    "wrangler": "^4.52.1"
+    "wrangler": "^4.52.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "sharp": "0.35.5",
+    "fast-glob": "file:tools/eslint-glob"
+  },
+  "engines": {
+    "node": ">=22.23.3"
+  },
+  "overrides": {
+    "sharp": "$sharp",
+    "@next/eslint-plugin-next": {
+      "fast-glob": "$fast-glob"
+    }
   }
 }
