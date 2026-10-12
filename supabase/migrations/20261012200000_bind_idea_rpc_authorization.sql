@@ -1,8 +1,6 @@
 -- Bind privileged idea RPC access to the verified caller, preserving signatures and ACLs.
 -- CREATE OR REPLACE retains existing ownership and execute grants.
 
-BEGIN;
-
 CREATE OR REPLACE FUNCTION public.get_filtered_ideas(
   p_page INTEGER DEFAULT 0,
   p_limit INTEGER DEFAULT 10,
@@ -28,12 +26,12 @@ BEGIN
       -- 1. Public ideas
       -- 2. Private ideas owned by the current user
       -- 3. All ideas owned by the user in 'my_ideas' view
-      CASE 
-        WHEN p_sort_type = 'my_ideas' AND p_user_id IS NOT NULL THEN 
+      CASE
+        WHEN p_sort_type = 'my_ideas' AND p_user_id IS NOT NULL THEN
           i.user_id = p_user_id AND p_user_id = auth.uid()
         WHEN p_sort_type = 'my_ideas' AND p_user_id IS NULL THEN
           FALSE  -- Return no results if no user_id provided for my_ideas
-        ELSE 
+        ELSE
           -- For non-my_ideas queries, only show public ideas or private ideas owned by the user
           (NOT i.is_private OR (i.is_private AND i.user_id = auth.uid()))
       END
@@ -51,8 +49,8 @@ BEGIN
   SELECT *
   FROM filtered_ideas
   ORDER BY
-    CASE p_sort_type 
-      WHEN 'trending' THEN engagement_score 
+    CASE p_sort_type
+      WHEN 'trending' THEN engagement_score
       WHEN 'top' THEN (upvotes - downvotes)
       ELSE 0
     END DESC NULLS LAST,
@@ -82,7 +80,7 @@ BEGIN
         -- First find the original idea by following remixed_from_id up
         WITH RECURSIVE original_path AS (
             -- Start from the current idea
-            SELECT 
+            SELECT
                 i.id,
                 i.title,
                 i.author_name,
@@ -97,7 +95,7 @@ BEGIN
             UNION ALL
 
             -- Recursively get parent ideas
-            SELECT 
+            SELECT
                 i.id,
                 i.title,
                 i.author_name,
@@ -110,7 +108,7 @@ BEGIN
             INNER JOIN original_path op ON i.id = op.remixed_from_id
         )
         -- Get the original idea (highest up_level)
-        SELECT 
+        SELECT
             op.id,
             op.title,
             op.author_name,
@@ -125,7 +123,7 @@ BEGIN
         UNION ALL
 
         -- Then find all remixes by following remixed_from_id down
-        SELECT 
+        SELECT
             i.id,
             i.title,
             i.author_name,
@@ -137,9 +135,9 @@ BEGIN
         FROM public.ideas i
         INNER JOIN full_tree ft ON i.remixed_from_id = ft.id
     )
-    SELECT 
+    SELECT
         ft.id,
-        CASE 
+        CASE
             WHEN ft.is_private AND (auth.uid() IS NULL OR ft.user_id IS DISTINCT FROM auth.uid()) THEN 'Private Idea'
             ELSE ft.title
         END as title,
@@ -188,7 +186,7 @@ BEGIN
   WHERE id = p_user_id;
 
   UPDATE public.ideas
-  SET 
+  SET
     status = p_status,
     status_updated_at = now(),
     status_updated_by = p_user_id,
@@ -216,5 +214,3 @@ BEGIN
   RETURN v_idea;
 END;
 $$;
-
-COMMIT;

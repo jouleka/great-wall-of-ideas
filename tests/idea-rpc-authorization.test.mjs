@@ -117,7 +117,16 @@ test('privileged idea RPCs bind private reads and writes to authenticated caller
     FROM pg_proc WHERE pronamespace = 'public'::regnamespace
       AND proname IN ('get_filtered_ideas', 'get_idea_remix_history', 'update_idea_status') ORDER BY proname`
   const previousAcl = (await db.query(aclQuery)).rows
-  await db.exec(await migration('20261012200000_bind_idea_rpc_authorization.sql'))
+  const correctedMigration = await migration('20261012200000_bind_idea_rpc_authorization.sql')
+  await t.test('a failed migration batch rolls back replacements before its version can be recorded', async () => {
+    const query = `SELECT proname, pg_get_functiondef(oid) AS definition FROM pg_proc
+      WHERE pronamespace = 'public'::regnamespace
+        AND proname IN ('get_filtered_ideas', 'get_idea_remix_history', 'update_idea_status') ORDER BY proname`
+    const previous = (await db.query(query)).rows
+    await assert.rejects(db.exec(`${correctedMigration}\nSELECT 1 / 0;`), /division by zero/)
+    assert.deepEqual((await db.query(query)).rows, previous)
+  })
+  await db.exec(correctedMigration)
 
   await t.test('replacement preserves function ownership and execute grants', async () => {
     assert.deepEqual((await db.query(aclQuery)).rows, previousAcl)
