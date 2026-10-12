@@ -153,10 +153,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.get_idea_remix_history(UUID) TO authenticated, anon;
-
--- Evidence-only intended function reconstructed by omitting duplicated line 47.
--- Not executed; not verified deployed DDL; caller-identity flaw remains in this historical body.
+-- Preserve the intended status RPC contract without replaying duplicated historical declarations.
 CREATE OR REPLACE FUNCTION public.update_idea_status(
   p_idea_id UUID,
   p_status public.idea_status,
