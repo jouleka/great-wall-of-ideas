@@ -74,12 +74,31 @@ const ENTITIES: Record<string, string> = {
   '&nbsp;': ' ',
 }
 
+const BLOCK_TAG = /^\/?(br|p|li|h[1-6]|blockquote)\b/i
+
+/** Removes every `<...>` tag, leaving a space where block tags were. */
+function stripTags(html: string) {
+  let out = ''
+  let tag: string | null = null
+  for (const ch of html) {
+    if (ch === '<') {
+      tag = ''
+    } else if (ch === '>' && tag !== null) {
+      if (BLOCK_TAG.test(tag)) out += ' '
+      tag = null
+    } else if (tag !== null) {
+      tag += ch
+    } else {
+      out += ch
+    }
+  }
+  return out
+}
+
 /** Turns stored rich-text HTML into a single line of plain text. */
 export function toPlainText(html: string | null | undefined) {
   if (!html) return ''
-  return html
-    .replace(/<(br|\/p|\/li|\/h[1-6]|\/blockquote)\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, '')
+  return stripTags(html)
     .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (entity) => ENTITIES[entity] ?? entity)
     .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
