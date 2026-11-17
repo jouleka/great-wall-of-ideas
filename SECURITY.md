@@ -16,11 +16,14 @@ and preserves the previous non-emitting content update behavior. Tailwind 4
 loads the existing theme configuration explicitly through its maintained
 PostCSS plugin. Next.js and the OpenNext Cloudflare adapter are upgraded together.
 
-Next's ESLint plugin uses only the synchronous glob function. The local
-`tools/eslint-glob` adapter implements that contract with maintained tinyglobby,
-replacing the obsolete vulnerable discovery dependency. Keep this adapter only
-while Next's upstream plugin requires that legacy package; verify lint after
-any change. The file dependency and override are included in the lockfile.
+`picomatch` has an unpatched ReDoS advisory (GHSA-fc5q-39xc-vjpf), and both
+`fast-glob` and `tinyglobby` depend on it. The tooling that needs them (Next's
+ESLint plugin, typescript-eslint, eslint-import-resolver-typescript and
+OpenNext's minifier) only uses a small synchronous glob surface, so the local
+`tools/node-glob` adapter implements it on Node's built-in `fs.globSync` and is
+installed in place of both packages through `overrides`. Keep the adapter only
+while upstream still pulls in picomatch; verify lint and the Cloudflare build
+after any change. The file dependencies and overrides are in the lockfile.
 
 Cloudflare preview and deploy scripts now run the server Worker configured in
 `wrangler.jsonc`, with the required self-reference binding. They previously
