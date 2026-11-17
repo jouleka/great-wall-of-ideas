@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { createSupabaseClient } from "@/lib/supabase/client"
 import { motion } from "framer-motion"
 import { Check, Loader2, ArrowLeft, AlertCircle } from "lucide-react"
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils/utils"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { authService } from "@/lib/services/auth-service"
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/turnstile-widget"
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { passwordChangeSchema, PASSWORD_REQUIREMENTS, type PasswordChangeInputs } from '@/lib/utils/validation'
@@ -47,6 +48,12 @@ export function ProfileContent() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null)
+  const handleCaptchaToken = useCallback((token: string | null) => {
+    setCaptchaToken(token)
+    if (token) setPasswordError(null)
+  }, [])
   const [initialFormData, setInitialFormData] = useState<ProfileFormData>({
     full_name: '',
     username: '',
@@ -145,6 +152,10 @@ export function ProfileContent() {
 
   const onPasswordSubmit = async (data: PasswordChangeInputs) => {
     if (!user?.email) return
+    if (!captchaToken) {
+      setPasswordError('Please complete the security check before continuing.')
+      return
+    }
     
     setIsUpdatingPassword(true)
     setIsResettingPassword(false)
@@ -154,7 +165,8 @@ export function ProfileContent() {
       const { success, error } = await authService.updatePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
-        confirmPassword: data.confirmPassword
+        confirmPassword: data.confirmPassword,
+        captchaToken
       })
       
       if (success) {
@@ -166,21 +178,31 @@ export function ProfileContent() {
       console.error('Error updating password:', error)
       setPasswordError('An unexpected error occurred')
     } finally {
+      turnstileRef.current?.reset()
       setIsUpdatingPassword(false)
     }
   }
 
   async function handlePasswordReset() {
     if (!user?.email) return
+    if (!captchaToken) {
+      setPasswordError('Please complete the security check before continuing.')
+      return
+    }
 
     setIsResettingPassword(true)
     setIsUpdatingPassword(false)
+    setPasswordError(null)
     
-    await authService.sendPasswordResetEmail({ 
-      email: user.email 
-    })
-    
-    setIsResettingPassword(false)
+    try {
+      await authService.sendPasswordResetEmail({ 
+        email: user.email,
+        captchaToken
+      })
+    } finally {
+      turnstileRef.current?.reset()
+      setIsResettingPassword(false)
+    }
   }
 
   if (!user?.profile) return null
@@ -447,8 +469,9 @@ export function ProfileContent() {
                             </p>
                           )}
                         </div>
+                        <TurnstileWidget ref={turnstileRef} onTokenChange={handleCaptchaToken} />
                         {passwordError && (
-                          <p className="text-xs sm:text-sm text-destructive">{passwordError}</p>
+                          <p role="alert" className="text-xs sm:text-sm text-destructive">{passwordError}</p>
                         )}
                       </div>
                       
@@ -490,6 +513,7 @@ export function ProfileContent() {
                             Forgot your password?
                           </p>
                           <Button
+                            type="button"
                             variant="outline"
                             onClick={handlePasswordReset}
                             disabled={isResettingPassword}

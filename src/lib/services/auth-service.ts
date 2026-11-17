@@ -7,16 +7,24 @@ import { getBaseUrl } from '@/lib/utils/get-base-url'
 interface PasswordResetOptions {
   email: string
   redirectTo?: string
+  captchaToken?: string | null
 }
 
 interface UpdatePasswordOptions {
   currentPassword?: string
   newPassword: string
   confirmPassword: string
+  captchaToken?: string | null
+}
+
+// Supabase Auth only verifies a CAPTCHA token once CAPTCHA protection is
+// enabled for the project; until then the token is ignored.
+function captchaOption(captchaToken?: string | null) {
+  return captchaToken ? { captchaToken } : {}
 }
 
 export const authService = {
-  async signUp(email: string, password: string, username: string) {
+  async signUp(email: string, password: string, username: string, captchaToken?: string | null) {
     const supabase = createSupabaseClient()
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
@@ -29,7 +37,8 @@ export const authService = {
             username,
             full_name: username
           },
-          emailRedirectTo: `${siteUrl}/auth/callback?type=signup`
+          emailRedirectTo: `${siteUrl}/auth/callback?type=signup`,
+          ...captchaOption(captchaToken)
         },
       })
 
@@ -48,12 +57,13 @@ export const authService = {
     }
   },
 
-  async signIn(email: string, password: string) {
+  async signIn(email: string, password: string, captchaToken?: string | null) {
     const supabase = createSupabaseClient()
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: captchaOption(captchaToken),
       })
 
       if (error) throw error
@@ -71,13 +81,13 @@ export const authService = {
     }
   },
 
-  async signInWithEmailOrUsername(emailOrUsername: string, password: string) {
+  async signInWithEmailOrUsername(emailOrUsername: string, password: string, captchaToken?: string | null) {
     const supabase = createSupabaseClient()
     try {
       const isEmail = emailOrUsername.includes('@')
       
       if (isEmail) {
-        return await this.signIn(emailOrUsername, password)
+        return await this.signIn(emailOrUsername, password, captchaToken)
       } else {
         const { data: emailData, error: emailError } = await supabase
           .rpc('get_user_email_by_username', {
@@ -88,7 +98,7 @@ export const authService = {
           throw new Error('Username not found')
         }
 
-        return await this.signIn(emailData, password)
+        return await this.signIn(emailData, password, captchaToken)
       }
     } catch (error) {
       console.error('Error in signInWithEmailOrUsername:', error)
@@ -154,12 +164,13 @@ export const authService = {
     }
   },
 
-  async sendPasswordResetEmail({ email, redirectTo }: PasswordResetOptions) {
+  async sendPasswordResetEmail({ email, redirectTo, captchaToken }: PasswordResetOptions) {
     const supabase = createSupabaseClient()
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://greatwallofideas.com'
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo || `${siteUrl}/auth/callback?type=recovery`
+        redirectTo: redirectTo || `${siteUrl}/auth/callback?type=recovery`,
+        ...captchaOption(captchaToken)
       })
 
       if (error) throw error
@@ -177,7 +188,7 @@ export const authService = {
     }
   },
 
-  async updatePassword({ currentPassword, newPassword, confirmPassword }: UpdatePasswordOptions) {
+  async updatePassword({ currentPassword, newPassword, confirmPassword, captchaToken }: UpdatePasswordOptions) {
     const supabase = createSupabaseClient()
     try {
       const passwordValidation = validatePassword(newPassword)
@@ -197,10 +208,15 @@ export const authService = {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email,
           password: currentPassword,
+          options: captchaOption(captchaToken),
         })
 
         if (signInError) {
-          throw new Error("Current password is incorrect")
+          throw new Error(
+            /captcha/i.test(signInError.message)
+              ? "Security check failed. Please complete it again and retry."
+              : "Current password is incorrect"
+          )
         }
       }
 

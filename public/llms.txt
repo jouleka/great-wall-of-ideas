@@ -1,0 +1,35 @@
+# Great Wall of Ideas
+
+> Great Wall of Ideas (https://greatwallofideas.com) is a community product for sharing unfinished ideas, discovering what resonates, discussing the details, and branching an existing idea into a remix. It treats an idea as the beginning of a conversation, not a polished pitch that must already have every answer.
+
+Tagline: "Publish the rough idea. Find the people who can make it better."
+
+## How it works
+
+1. Publish: write an idea with a rich-text editor, then choose a category and tags that make it discoverable. Ideas can be posted anonymously, and authors can keep an idea private.
+2. Discover: browse categories, search the wall, or sort by all, trending, and top-rated ideas.
+3. Discuss: vote ideas up or down, comment, reply, like comments, and receive realtime notifications.
+4. Remix: fork someone else's idea into a new one while keeping a link to its origin, with a visible remix history.
+
+Reading public ideas does not require an account. Publishing, voting, commenting, and remixing require signing in (email/password or Google).
+
+## Categories
+
+Technology, Business, Creative, Social Impact, Education, Health, Entertainment, and Environment, each with subcategories (for example Software & Apps, AI & Machine Learning, Startups, FinTech, Games, Design).
+
+## Key pages
+
+- [The idea wall](https://greatwallofideas.com/ideas): browse, search, and sort all public ideas.
+- Individual ideas: https://greatwallofideas.com/ideas?id={idea-id} opens a single public idea with its description, votes, comments, and remix history.
+- Search: https://greatwallofideas.com/ideas?q={search-term}
+- [Sitemap](https://greatwallofideas.com/sitemap.xml): every public idea URL.
+
+## Content and privacy
+
+- Only ideas marked public are visible to visitors and listed in the sitemap; private ideas are visible only to their author.
+- Ideas posted anonymously are shown with the author "Anonymous".
+
+## Project
+
+- Source code: https://github.com/jouleka/great-wall-of-ideas
+- Built with Next.js, React, TypeScript, and Supabase (Auth, PostgreSQL with row-level security, Realtime, Storage), deployed on Cloudflare via OpenNext.

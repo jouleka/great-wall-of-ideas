@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Navbar } from "@/components/layout/navbar";
 
 export const viewport: Viewport = {
@@ -6,11 +6,6 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
-};
-
-export const metadata: Metadata = {
-  title: "Great Wall of Ideas",
-  description: "A platform for sharing and exploring innovative ideas",
 };
 
 export default function IdeasLayout({
