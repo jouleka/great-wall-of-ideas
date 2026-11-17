@@ -30,7 +30,7 @@ test('only UUIDs are accepted as idea ids', () => {
 test('rich-text descriptions become single-line plain text', () => {
   assert.equal(
     toPlainText('<p>Hello <strong>world</strong></p><p>Tom &amp; Jerry&nbsp;&lt;3</p>'),
-    'Hello world Tom & Jerry <3',
+    'Hello world Tom & Jerry 3',
   )
   assert.equal(toPlainText(null), '')
 })

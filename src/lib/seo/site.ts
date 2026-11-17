@@ -81,6 +81,7 @@ export function toPlainText(html: string | null | undefined) {
     .replace(/<(br|\/p|\/li|\/h[1-6]|\/blockquote)\s*\/?>/gi, ' ')
     .replace(/<[^>]*>/g, '')
     .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (entity) => ENTITIES[entity] ?? entity)
+    .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
