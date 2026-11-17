@@ -30,7 +30,7 @@ export function validatePassword(password: string): { isValid: boolean; error?: 
   if (!result.success) {
     return { 
       isValid: false, 
-      error: result.error.errors[0].message 
+      error: result.error.issues[0].message 
     }
   }
   return { isValid: true }
@@ -41,7 +41,7 @@ export function validatePasswordConfirmation(newPassword: string, confirmPasswor
   if (!result.success) {
     return { 
       isValid: false, 
-      error: result.error.errors[0].message 
+      error: result.error.issues[0].message 
     }
   }
   return { isValid: true }
