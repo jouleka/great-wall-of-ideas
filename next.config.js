@@ -29,6 +29,13 @@ const nextConfig = {
     ],
   },
 
+  // The wall at /ideas is the home page. Send "/" there with a real HTTP 308
+  // (the page-level redirect in app/page.tsx is prerendered as a 200 HTML
+  // shell, which crawlers that don't run JavaScript can't follow).
+  async redirects() {
+    return [{ source: '/', destination: '/ideas', permanent: true }]
+  },
+
   // Reduce build output and disable source maps in production for faster builds
   productionBrowserSourceMaps: false,
   

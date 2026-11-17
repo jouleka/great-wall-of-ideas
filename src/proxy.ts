@@ -67,6 +67,12 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Skip the proxy (and its auth redirect) for build assets and public,
+     * crawler-facing files: robots.txt, sitemap.xml, llms*.txt, generated
+     * Open Graph/Twitter images and icons, the web manifest, /icons/*, and
+     * any static image/text file served from public/.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|llms.txt|llms-full.txt|opengraph-image|twitter-image|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml|webmanifest)$).*)',
   ],
 };

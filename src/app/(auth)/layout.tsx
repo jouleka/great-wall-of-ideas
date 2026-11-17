@@ -8,8 +8,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Great Wall of Ideas - Authentication",
+  title: "Sign in",
   description: "Sign in or create an account for Great Wall of Ideas",
+  // Account pages carry no public content; keep them out of search results.
+  robots: { index: false, follow: true },
 };
 
 export default function AuthLayout({

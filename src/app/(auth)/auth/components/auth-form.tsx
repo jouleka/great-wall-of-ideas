@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store/use-app-store'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/lib/utils/utils'
+import { TurnstileWidget, type TurnstileWidgetHandle } from '@/components/turnstile-widget'
 
 interface AuthFormProps {
   defaultTab?: string;
@@ -71,6 +72,9 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
   const [isResettingPassword, setIsResettingPassword] = useState(false)
   const [resetEmail, setResetEmail] = useState("")
   const [showResetForm, setShowResetForm] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaError, setCaptchaError] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null)
   const { signIn, signUp, signInWithGoogle } = useAppStore()
   const router = useRouter()
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterInputs>({
@@ -84,28 +88,54 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     resolver: zodResolver(loginSchema)
   })
 
+  const handleCaptchaToken = useCallback((token: string | null) => {
+    setCaptchaToken(token)
+    if (token) setCaptchaError(null)
+  }, [])
+
+  // Tokens are single-use: returns the current one, or flags the missing check.
+  const takeCaptchaToken = () => {
+    if (!captchaToken) {
+      setCaptchaError('Please complete the security check before continuing.')
+      return null
+    }
+    setCaptchaError(null)
+    return captchaToken
+  }
+
+  const resetCaptcha = () => {
+    turnstileRef.current?.reset()
+  }
+
   const onLoginSubmit = async (data: LoginInputs) => {
+    const token = takeCaptchaToken()
+    if (!token) return
+
     setIsEmailLoading(true)
     setError(null)
 
     try {
-      await signIn(data.emailOrUsername, data.password)
+      await signIn(data.emailOrUsername, data.password, token)
       router.push('/ideas')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
+      resetCaptcha()
       setIsEmailLoading(false)
     }
   }
 
   const onRegisterSubmit = async (data: RegisterInputs) => {
+    const token = takeCaptchaToken()
+    if (!token) return
+
     setIsEmailLoading(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
-      const { user, error } = await signUp(data.email, data.password, data.username)
+      const { user, error } = await signUp(data.email, data.password, data.username, token)
       if (error) throw error
       if (user) {
         setSuccessMessage('Almost there! Check your email to complete sign up.')
@@ -114,6 +144,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
+      resetCaptcha()
       setIsEmailLoading(false)
     }
   }
@@ -125,10 +156,14 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
       return
     }
 
+    const token = takeCaptchaToken()
+    if (!token) return
+
     setIsResettingPassword(true)
     try {
       const { success } = await authService.sendPasswordResetEmail({
-        email: resetEmail
+        email: resetEmail,
+        captchaToken: token
       })
 
       if (success) {
@@ -136,6 +171,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         setResetEmail("")
       }
     } finally {
+      resetCaptcha()
       setIsResettingPassword(false)
     }
   }
@@ -156,6 +192,25 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
 
   const handleContinueAsGuest = () => {
     router.push('/ideas')
+  }
+
+  const captchaField = (
+    <div className="space-y-2">
+      <TurnstileWidget ref={turnstileRef} onTokenChange={handleCaptchaToken} />
+      {captchaError && (
+        <p role="alert" className="text-sm text-red-500">{captchaError}</p>
+      )}
+    </div>
+  )
+
+  const showAuthForms = () => {
+    setCaptchaError(null)
+    setShowResetForm(false)
+  }
+
+  const openResetForm = () => {
+    setCaptchaError(null)
+    setShowResetForm(true)
   }
 
   if (showResetForm) {
@@ -181,6 +236,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 className="bg-white/50"
               />
             </div>
+            {captchaField}
             <div className="space-y-2">
               <Button
                 type="submit"
@@ -200,7 +256,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="button"
                 variant="ghost"
                 className="w-full"
-                onClick={() => setShowResetForm(false)}
+                onClick={showAuthForms}
                 disabled={isResettingPassword}
               >
                 Back to Login
@@ -223,7 +279,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full" onValueChange={() => setCaptchaError(null)}>
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="login">Sign In</TabsTrigger>
             <TabsTrigger value="register">Join Us</TabsTrigger>
@@ -261,6 +317,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   <p className="text-sm text-red-500">{loginErrors.password.message}</p>
                 )}
               </div>
+              {captchaField}
               <Button
                 type="submit"
                 className="w-full"
@@ -279,7 +336,7 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                 type="button"
                 variant="link"
                 className="w-full text-sm text-muted-foreground"
-                onClick={() => setShowResetForm(true)}
+                onClick={openResetForm}
               >
                 Forgot your password?
               </Button>
@@ -342,6 +399,8 @@ export function AuthForm({ defaultTab = 'login' }: AuthFormProps) {
                   <li>• A special character to spice it up</li>
                 </ul>
               </div>
+
+              {captchaField}
 
               <Button
                 type="submit"

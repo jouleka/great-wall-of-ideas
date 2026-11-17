@@ -26,8 +26,8 @@ interface AppActions {
   setUser: (user: UserWithProfile | null) => void
   setLoading: (loading: boolean) => void
   refreshSession: () => Promise<void>
-  signIn: (emailOrUsername: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, username: string) => Promise<{ user: UserWithProfile | null; error: unknown | null }>
+  signIn: (emailOrUsername: string, password: string, captchaToken?: string | null) => Promise<void>
+  signUp: (email: string, password: string, username: string, captchaToken?: string | null) => Promise<{ user: UserWithProfile | null; error: unknown | null }>
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<void>
   fetchActivityData: (userId: string) => Promise<void>
@@ -85,9 +85,9 @@ export const useAppStore = create<AppState & AppActions>()(
         }
       },
 
-      signIn: async (emailOrUsername, password) => {
+      signIn: async (emailOrUsername, password, captchaToken) => {
         try {
-          const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password)
+          const { error } = await authService.signInWithEmailOrUsername(emailOrUsername, password, captchaToken)
           if (error) throw error
           await get().refreshSession()
         } catch (error) {
@@ -96,9 +96,9 @@ export const useAppStore = create<AppState & AppActions>()(
         }
       },
 
-      signUp: async (email, password, username) => {
+      signUp: async (email, password, username, captchaToken) => {
         try {
-          const result = await authService.signUp(email, password, username)
+          const result = await authService.signUp(email, password, username, captchaToken)
           if (result.user) {
             await get().refreshSession()
           }
